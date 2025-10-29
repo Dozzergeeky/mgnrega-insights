@@ -1,21 +1,21 @@
-# Our Voice | MGNREGA Insights 🌾
+# Our Voice | MGNREGA Insights
 
 ## Overview
 
 **"Our Voice | MGNREGA Insights"** makes MGNREGA (Mahatma Gandhi National Rural Employment Guarantee Act) data accessible to 12.15 Crore rural Indians through a simple, production-ready web application.
 
-### 🎯 Project Mission
+### Project Mission
 
 Transform complex government data from data.gov.in into **simple visual stories** that anyone can understand - even with low digital literacy.
 
-### ✨ Key Features
+### Key Features
 
-- 📍 **Auto-detect your district** using geolocation (bonus feature!)
-- 📊 **Visual metrics** with icons and color coding
-- 📈 **Historical trends** - see 6-month performance
-- 🌏 **Bilingual** (Hindi + English) for accessibility
-- ⚡ **Production-ready** - handles millions of users
-- 🔄 **Resilient** - works even when data.gov.in is down
+- Auto-detect your district using geolocation (optional)
+- Visual metrics with icons and color coding
+- Historical trends — 6-month performance
+- Bilingual (Hindi + English) for accessibility
+- Production-ready — handles high traffic
+- Resilient — works even when data.gov.in is down
 
 ## Tech Stack
 
@@ -85,7 +85,7 @@ Each run is idempotent and will upsert based on `{ districtCode, period }` so it
 
 ## Features Deep Dive
 
-### 🌍 Geolocation Detection
+### Geolocation Detection
 
 The district picker includes **automatic location detection**:
 
@@ -94,7 +94,7 @@ The district picker includes **automatic location detection**:
 - Falls back to manual district selection on permission denial
 - HTTPS required in production (works on localhost for testing)
 
-### 📊 Dashboard Metrics
+### Dashboard Metrics
 
 Four key metrics displayed with visual indicators:
 
@@ -103,7 +103,7 @@ Four key metrics displayed with visual indicators:
 3. **Completion Rate** (%) - Performance indicator
 4. **Work Summary** - Completed vs ongoing projects
 
-### 📈 Historical Trends
+### Historical Trends
 
 6-month performance visualization:
 
@@ -112,7 +112,7 @@ Four key metrics displayed with visual indicators:
 - Helps citizens track improvements or declines
 - Data fetched from `/api/history` endpoint
 
-### 🔄 Data Resilience
+### Data Resilience
 
 **Multi-layer fallback system** ensures 100% uptime:
 
@@ -174,13 +174,13 @@ npx playwright test --debug
 
 **Current Test Coverage**:
 
-- ✅ Home page renders district picker
-- ✅ Continue button navigates to dashboard
-- ✅ Dashboard displays metrics for selected district
+- Home page renders district picker
+- Continue button navigates to dashboard
+- Dashboard displays metrics for selected district
 
 ## Take-Home Project Alignment
 
-### ✅ Core Requirements
+### Core Requirements
 
 1. **Simplicity**: Visual-first design for low digital literacy
 2. **District Selection**: Manual picker + auto-detection
@@ -188,16 +188,16 @@ npx playwright test --debug
 4. **Historical Data**: 6-month trend visualization
 5. **Production Ready**: VPS deployment guide + Vercel option
 
-### ✅ Bonus Features
+### Bonus Features
 
-- 🌟 **Geolocation**: Auto-detect user's district
-- 📊 **Comparative Analytics**: Historical trends with completion rates
-- 🚀 **Hosted**: Deployment-ready for actual VPS/VM hosting
-- 📱 **Mobile Optimized**: Responsive design, touch-friendly
+- Geolocation: Auto-detect user's district
+- Comparative analytics: Historical trends with completion rates
+- Hosted: Deployment-ready for actual VPS/VM hosting
+- Mobile optimized: Responsive design, touch-friendly
 
 ---
 
-**Built with ❤️ for 12.15 Crore rural Indians** | Made possible by data.gov.in
+Built for 12.15 Crore rural Indians | Made possible by data.gov.in
 
 ## Stopping Local Services
 
