@@ -1,8 +1,12 @@
-import { Suspense } from "react";
+"use client";
+
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Loader2 } from "lucide-react";
 
 interface DashboardMetrics {
   workDemand: number;
@@ -19,24 +23,6 @@ interface HistoricalData {
   wagePayments: number;
   completionRate: number;
   activeWorkers?: number;
-}
-
-async function fetchDashboardData(districtCode: string): Promise<DashboardMetrics | null> {
-  try {
-    const response = await fetch(`/api/dashboard?district=${districtCode}`, {
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return null;
-    }
-
-    const data = await response.json();
-    return data.metrics;
-  } catch (error) {
-    console.error("Failed to fetch dashboard data:", error);
-    return null;
-  }
 }
 
 async function fetchHistoricalData(districtCode: string): Promise<HistoricalData[]> {
@@ -209,52 +195,120 @@ function MetricsDisplay({
   );
 }
 
-export default async function DashboardPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ district?: string; name?: string }>;
-}) {
-  const params = await searchParams;
-  const districtCode = params.district;
-  const districtName = params.name || districtCode || "Unknown";
+function DashboardContent() {
+  const searchParams = useSearchParams();
+  const districtCode = searchParams.get('district');
+  const districtName = searchParams.get('name') || districtCode || "Unknown";
 
-  let metrics: DashboardMetrics | null = null;
-  let history: HistoricalData[] = [];
+  const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
+  const [history, setHistory] = useState<HistoricalData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  if (districtCode) {
-    [metrics, history] = await Promise.all([
-      fetchDashboardData(districtCode),
-      fetchHistoricalData(districtCode),
-    ]);
+  useEffect(() => {
+    async function fetchData() {
+      if (!districtCode) {
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+      
+      try {
+        const [dashboardRes, historyRes] = await Promise.all([
+          fetch(`/api/dashboard?district=${districtCode}`),
+          fetch(`/api/history?district=${districtCode}`)
+        ]);
+
+        if (!dashboardRes.ok) {
+          throw new Error('Failed to fetch dashboard data');
+        }
+
+        const dashboardData = await dashboardRes.json();
+        const historyData = historyRes.ok ? await historyRes.json() : { history: [] };
+
+        setMetrics(dashboardData.metrics);
+        setHistory(historyData.history || []);
+      } catch (err) {
+        console.error('Data fetch error:', err);
+        setError(err instanceof Error ? err.message : 'Failed to load data');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchData();
+  }, [districtCode]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center">
+          <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+          <p className="text-lg text-muted-foreground">Loading dashboard data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (metrics) {
+    return <MetricsDisplay metrics={metrics} districtName={districtName} history={history} />;
   }
 
   return (
+    <>
+      <div className="flex items-center justify-between mb-8">
+        <div className="flex-1">
+          <div className="flex items-center gap-4 mb-2">
+            <Link href="/">
+              <Button variant="outline" size="sm">
+                ← Back
+              </Button>
+            </Link>
+            <h1 className="text-4xl font-bold">MGNREGA Dashboard</h1>
+          </div>
+          <p className="mt-2 text-lg text-destructive">
+            {districtCode ? "Unable to load data for this district" : "Please select a district to view data"}
+          </p>
+        </div>
+        <ThemeToggle />
+      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>No Data Available</CardTitle>
+          <CardDescription>
+            {error || (districtCode
+              ? "Data for this district is not available yet."
+              : "Go back and select a district to view its MGNREGA metrics.")}
+          </CardDescription>
+        </CardHeader>
+        {error && (
+          <CardContent>
+            <Button variant="outline" onClick={() => window.location.reload()}>
+              Try Again
+            </Button>
+          </CardContent>
+        )}
+      </Card>
+    </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
     <main className="min-h-screen bg-linear-to-b from-background to-secondary/20">
       <div className="container mx-auto px-6 py-12">
-        {metrics ? (
-          <Suspense fallback={<div>Loading dashboard...</div>}>
-            <MetricsDisplay metrics={metrics} districtName={districtName} history={history} />
-          </Suspense>
-        ) : (
-          <>
-            <div className="mb-8">
-              <h1 className="text-4xl font-bold">MGNREGA Dashboard</h1>
-              <p className="mt-2 text-lg text-destructive">
-                {districtCode ? "Unable to load data for this district" : "Please select a district to view data"}
-              </p>
+        <Suspense fallback={
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <div className="text-center">
+              <Loader2 className="h-12 w-12 animate-spin mx-auto mb-4 text-primary" />
+              <p className="text-lg text-muted-foreground">Loading...</p>
             </div>
-            <Card>
-              <CardHeader>
-                <CardTitle>No Data Available</CardTitle>
-                <CardDescription>
-                  {districtCode
-                    ? "Data for this district is not available yet."
-                    : "Go back and select a district to view its MGNREGA metrics."}
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </>
-        )}
+          </div>
+        }>
+          <DashboardContent />
+        </Suspense>
       </div>
     </main>
   );

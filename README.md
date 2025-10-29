@@ -21,7 +21,7 @@ Transform complex government data from data.gov.in into **simple visual stories*
 
 - **Frontend**: Next.js 16 (App Router), React 19, Tailwind v4
 - **UI**: shadcn primitives for accessibility
-- **Database**: MongoDB (with connection pooling & TTL indexes)
+- **Database**: MongoDB (with connection pooling & TTL indexes); optional Neon Postgres for read-mostly reference data
 - **Validation**: Zod for type-safe environment vars
 - **Testing**: Playwright for E2E coverage
 - **Deployment**: VPS/VM ready (nginx + PM2) or Vercel
@@ -41,6 +41,7 @@ MGNREGA_API_KEY=
 MGNREGA_RESOURCE_ID=
 MGNREGA_BASE_URL=https://api.data.gov.in/resource
 MGNREGA_PAGE_SIZE=100
+POSTGRES_URL=
 ```
 
 ## Local Development
@@ -65,9 +66,12 @@ MGNREGA_API_KEY=your_api_key_here
 MGNREGA_RESOURCE_ID=your_resource_id_here
 MGNREGA_BASE_URL=https://api.data.gov.in/resource
 MGNREGA_PAGE_SIZE=100
+POSTGRES_URL=postgres://user:pass@host/db?sslmode=require
 ```
 
 **Note**: The app works perfectly with mock data even without API credentials! See `DATA-INTEGRATION.md` for real data setup.
+
+If `POSTGRES_URL` is configured, the app reads West Bengal districts from Postgres (`public.districts`) first and falls back to Mongo or static data when unavailable.
 
 ## Data Sync Workflow
 
