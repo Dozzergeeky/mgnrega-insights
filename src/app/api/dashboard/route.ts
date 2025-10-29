@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getMongoDb } from "@/lib/mongodb";
+import { isDataGovRecord, sumField } from "@/lib/data-gov";
 
 export const dynamic = "force-dynamic";
 
@@ -42,39 +43,34 @@ export async function GET(request: Request) {
     const record = await metricsCollection
       .findOne({ districtCode }, { sort: { lastSyncedAt: -1, period: -1 } });
 
-    if (record && record.records && Array.isArray(record.records) && record.records.length > 0) {
-      // Aggregate real data from data.gov.in records
-      const records = record.records as any[];
-      
-      // Map actual data.gov.in field names to our metrics
-      const workDemand = records.reduce((sum, r) => 
-        sum + (Number(r.Persondays_of_Central_Liability_so_far) || 0), 0);
-      const wagePayments = records.reduce((sum, r) => 
-        sum + (Number(r.Wages) || 0), 0);
-      const worksCompleted = records.reduce((sum, r) => 
-        sum + (Number(r.Number_of_Completed_Works) || 0), 0);
-      const worksOngoing = records.reduce((sum, r) => 
-        sum + (Number(r.Number_of_Ongoing_Works) || 0), 0);
-      const activeWorkers = records.reduce((sum, r) => 
-        sum + (Number(r.Total_No_of_Active_Workers) || 0), 0);
-      
-      const totalProjects = worksCompleted + worksOngoing;
-      const completionRate = totalProjects > 0 ? (worksCompleted / totalProjects) * 100 : 0;
+    if (record && Array.isArray(record.records) && record.records.length > 0) {
+      const dataGovRecords = record.records.filter(isDataGovRecord);
 
-      return NextResponse.json({
-        districtCode,
-        metrics: {
-          workDemand: Math.round(workDemand),
-          wagePayments: Math.round(wagePayments),
-          completionRate: Math.round(completionRate * 10) / 10,
-          activeWorkers: Math.round(activeWorkers),
-          totalProjects: totalProjects,
-          completedProjects: worksCompleted,
-        },
-        lastUpdated: record.lastSyncedAt,
-        source: "real_data",
-        period: record.period,
-      });
+      if (dataGovRecords.length > 0) {
+        const workDemand = sumField(dataGovRecords, "Persondays_of_Central_Liability_so_far");
+        const wagePayments = sumField(dataGovRecords, "Wages");
+        const worksCompleted = sumField(dataGovRecords, "Number_of_Completed_Works");
+        const worksOngoing = sumField(dataGovRecords, "Number_of_Ongoing_Works");
+        const activeWorkers = sumField(dataGovRecords, "Total_No_of_Active_Workers");
+
+        const totalProjects = worksCompleted + worksOngoing;
+        const completionRate = totalProjects > 0 ? (worksCompleted / totalProjects) * 100 : 0;
+
+        return NextResponse.json({
+          districtCode,
+          metrics: {
+            workDemand: Math.round(workDemand),
+            wagePayments: Math.round(wagePayments),
+            completionRate: Math.round(completionRate * 10) / 10,
+            activeWorkers: Math.round(activeWorkers),
+            totalProjects,
+            completedProjects: worksCompleted,
+          },
+          lastUpdated: record.lastSyncedAt,
+          source: "real_data",
+          period: record.period,
+        });
+      }
     }
 
     // Return realistic mock data if no records found

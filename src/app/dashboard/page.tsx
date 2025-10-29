@@ -25,24 +25,6 @@ interface HistoricalData {
   activeWorkers?: number;
 }
 
-async function fetchHistoricalData(districtCode: string): Promise<HistoricalData[]> {
-  try {
-    const response = await fetch(`/api/history?district=${districtCode}`, {
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      return [];
-    }
-
-    const data = await response.json();
-    return data.history || [];
-  } catch (error) {
-    console.error("Failed to fetch historical data:", error);
-    return [];
-  }
-}
-
 function formatCurrency(amount: number): string {
   return new Intl.NumberFormat("en-IN", {
     style: "currency",

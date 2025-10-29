@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getMongoDb } from "@/lib/mongodb";
+import { isDataGovRecord, sumField } from "@/lib/data-gov";
 
 export const dynamic = "force-dynamic";
 
@@ -74,17 +75,14 @@ export async function GET(request: Request) {
         const date = new Date(Number(year), Number(month) - 1);
         
         // Aggregate metrics from data.gov.in records
-        const recordsArray = (record.records || []) as any[];
-        const workDemand = recordsArray.reduce((sum, r) => 
-          sum + (Number(r.Persondays_of_Central_Liability_so_far) || 0), 0);
-        const wagePayments = recordsArray.reduce((sum, r) => 
-          sum + (Number(r.Wages) || 0), 0);
-        const worksCompleted = recordsArray.reduce((sum, r) => 
-          sum + (Number(r.Number_of_Completed_Works) || 0), 0);
-        const worksOngoing = recordsArray.reduce((sum, r) => 
-          sum + (Number(r.Number_of_Ongoing_Works) || 0), 0);
-        const activeWorkers = recordsArray.reduce((sum, r) => 
-          sum + (Number(r.Total_No_of_Active_Workers) || 0), 0);
+        const rawRecords = Array.isArray(record.records) ? record.records : [];
+        const dataGovRecords = rawRecords.filter(isDataGovRecord);
+
+        const workDemand = sumField(dataGovRecords, "Persondays_of_Central_Liability_so_far");
+        const wagePayments = sumField(dataGovRecords, "Wages");
+        const worksCompleted = sumField(dataGovRecords, "Number_of_Completed_Works");
+        const worksOngoing = sumField(dataGovRecords, "Number_of_Ongoing_Works");
+        const activeWorkers = sumField(dataGovRecords, "Total_No_of_Active_Workers");
         
         const totalWorks = worksCompleted + worksOngoing;
         const completionRate = totalWorks > 0 ? (worksCompleted / totalWorks) * 100 : 0;

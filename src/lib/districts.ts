@@ -6,6 +6,27 @@ import type { District } from "@/types/district";
 const COLLECTION_NAME = "districts";
 const fallbackDistricts: District[] = WEST_BENGAL_DISTRICTS;
 
+interface PostgresDistrictRow {
+  code: string;
+  name: string;
+  state_code: string;
+  state_name: string;
+}
+
+const isPostgresDistrictRow = (value: unknown): value is PostgresDistrictRow => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return (
+    typeof record.code === "string" &&
+    typeof record.name === "string" &&
+    typeof record.state_code === "string" &&
+    typeof record.state_name === "string"
+  );
+};
+
 export async function listDistricts(): Promise<District[]> {
   // 1) Try Postgres (Neon) first when configured
   try {
@@ -18,12 +39,15 @@ export async function listDistricts(): Promise<District[]> {
         ORDER BY name
       `;
 
-      if ((rows as any[]).length > 0) {
-        return (rows as any[]).map((r: any) => ({
-          code: r.code,
-          name: r.name,
-          stateCode: r.state_code,
-          stateName: r.state_name,
+      const rowArray = Array.isArray(rows) ? Array.from(rows) : [];
+      const districts = rowArray.filter(isPostgresDistrictRow);
+
+      if (districts.length > 0) {
+        return districts.map((district) => ({
+          code: district.code,
+          name: district.name,
+          stateCode: district.state_code,
+          stateName: district.state_name,
         }));
       }
     }
