@@ -50,7 +50,7 @@ POSTGRES_URL=
 npm install
 npm run db:up         # start local MongoDB via Docker (first run takes ~30s)
 npm run seed:districts   # one-time West Bengal district seed
-npm run dev              # start Next.js locally on http://localhost:3000
+node node_modules/next/dist/bin/next dev   # start Next.js locally on http://localhost:3000
 ```
 
 > If `seed:districts` reports `ECONNREFUSED`, ensure MongoDB is running (`npm run db:up`) or update `MONGODB_URI` to point at your own cluster.
@@ -161,10 +161,12 @@ Set environment variables in Vercel dashboard.
 
 ### Performance Optimizations
 
-- **SSR** for instant page loads
+- **Client-Side Rendering** with Suspense for optimal loading UX
+- **Streaming Data** with React 19 and Next.js 16
 - **Connection Pooling** prevents bottlenecks
 - **Indexed Queries** for <100ms response times
-- **Edge Caching** (when deployed to Vercel)
+- **Edge Caching** for API routes (when deployed to Vercel)
+- **Optional Postgres** with serverless driver for fast reads
 
 ## Testing
 
@@ -214,6 +216,14 @@ npm run db:down   # stop and remove the Dockerized MongoDB container
 - `npm run lint` — static analysis via ESLint (Next.js config)
 - Unit/feature tests will be added alongside API and component development
 
+## Live Deployment
+
+- **Production URL**: https://mgnrega-2n74in54e-dozzergeekys-projects.vercel.app
+- **GitHub Repository**: https://github.com/Dozzergeeky/mgnrega-insights
+- **Platform**: Vercel (serverless)
+
 ## Deployment Notes
 
-The app is intended for deployment on a VPS/VM behind nginx with TLS, backed by MongoDB and optionally Redis/Queue workers for ingestion retries. Observability (Prometheus/Grafana or similar) should be wired around the `/api/health` endpoint and the ingestion cron.
+The app is deployed on Vercel for serverless hosting with automatic scaling. It can also be deployed on a VPS/VM behind nginx with TLS, backed by MongoDB and optionally Redis/Queue workers for ingestion retries. Observability (Prometheus/Grafana or similar) should be wired around the `/api/health` endpoint and the ingestion cron.
+
+For Postgres integration, set `POSTGRES_URL` environment variable in your deployment platform.
