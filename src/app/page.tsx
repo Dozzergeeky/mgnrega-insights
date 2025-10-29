@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 export default function Home() {
   return (
-    <main className="bg-gradient-to-b from-background to-secondary/20">
+    <main className="bg-linear-to-b from-background to-secondary/20">
       <div className="absolute top-6 right-6 z-10">
         <ThemeToggle />
       </div>

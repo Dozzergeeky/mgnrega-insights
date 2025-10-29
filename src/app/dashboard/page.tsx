@@ -23,8 +23,7 @@ interface HistoricalData {
 
 async function fetchDashboardData(districtCode: string): Promise<DashboardMetrics | null> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const response = await fetch(`${baseUrl}/api/dashboard?district=${districtCode}`, {
+    const response = await fetch(`/api/dashboard?district=${districtCode}`, {
       cache: "no-store",
     });
 
@@ -42,8 +41,7 @@ async function fetchDashboardData(districtCode: string): Promise<DashboardMetric
 
 async function fetchHistoricalData(districtCode: string): Promise<HistoricalData[]> {
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
-    const response = await fetch(`${baseUrl}/api/history?district=${districtCode}`, {
+    const response = await fetch(`/api/history?district=${districtCode}`, {
       cache: "no-store",
     });
 
@@ -82,7 +80,7 @@ function SimpleTrendChart({ data }: { data: HistoricalData[] }) {
             <div key={idx} className="flex-1 flex flex-col items-center gap-2">
               <div className="w-full flex items-end" style={{ height: "120px" }}>
                 <div 
-                  className="w-full bg-gradient-to-t from-blue-600 to-blue-400 rounded-t transition-all hover:from-blue-700 hover:to-blue-500" 
+                  className="w-full bg-linear-to-t from-blue-600 to-blue-400 rounded-t transition-all hover:from-blue-700 hover:to-blue-500" 
                   style={{ height: `${height}%`, minHeight: "8px" }}
                   title={`${record.month}: ${record.completionRate}%`}
                 />
@@ -231,7 +229,7 @@ export default async function DashboardPage({
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-b from-background to-secondary/20">
+    <main className="min-h-screen bg-linear-to-b from-background to-secondary/20">
       <div className="container mx-auto px-6 py-12">
         {metrics ? (
           <Suspense fallback={<div>Loading dashboard...</div>}>
