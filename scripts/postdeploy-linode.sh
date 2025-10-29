@@ -86,9 +86,25 @@ ${SUDO[@]:-} apt-get install -y nginx
 
 if [[ "$INSTALL_MONGODB_FLAG" != "false" ]]; then
 	if ! command -v mongod >/dev/null 2>&1 && ! command -v mongodb >/dev/null 2>&1; then
-		if apt-cache show mongodb-org >/dev/null 2>&1; then
-			${SUDO[@]:-} apt-get install -y mongodb-org
-		else
+		OS_CODENAME="jammy"
+		if command -v lsb_release >/dev/null 2>&1; then
+			OS_CODENAME="$(lsb_release -cs)"
+		elif [[ -f /etc/os-release ]]; then
+			. /etc/os-release
+			OS_CODENAME="${UBUNTU_CODENAME:-${VERSION_CODENAME:-$OS_CODENAME}}"
+		fi
+
+		ARCH="$(dpkg --print-architecture)"
+
+		${SUDO[@]:-} apt-get install -y gnupg curl ca-certificates
+		${SUDO[@]:-} rm -f /etc/apt/sources.list.d/mongodb-org-*.list || true
+
+		curl -fsSL https://pgp.mongodb.com/server-7.0.asc | ${SUDO[@]:-} gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg
+		echo "deb [ arch=${ARCH} signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu ${OS_CODENAME}/mongodb-org/7.0 multiverse" | ${SUDO[@]:-} tee /etc/apt/sources.list.d/mongodb-org-7.0.list >/dev/null
+		${SUDO[@]:-} apt-get update -y
+
+		if ! ${SUDO[@]:-} apt-get install -y mongodb-org; then
+			echo "[postdeploy] mongodb-org installation failed, attempting distro mongodb package." >&2
 			${SUDO[@]:-} apt-get install -y mongodb
 		fi
 	fi
