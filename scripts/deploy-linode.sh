@@ -29,18 +29,35 @@ APP_PARENT_DIR="$(dirname "$APP_DIR")"
 REMOTE_USER="$(id -un)"
 REMOTE_HOME="$(getent passwd "$REMOTE_USER" | cut -d: -f6 || printf '%s' "$HOME")"
 
+if [[ $EUID -ne 0 ]]; then
+  if sudo -n true 2>/dev/null; then
+    SUDO=(sudo)
+  else
+    echo "[deploy] This script requires root privileges (apt, npm global installs)." >&2
+    echo "[deploy] Re-run with a root user (e.g. export LINODE_USER=\"root\") or configure passwordless sudo." >&2
+    exit 1
+  fi
+else
+  SUDO=()
+fi
+
 export DEBIAN_FRONTEND=noninteractive
 
-apt-get update -y
-apt-get install -y curl git build-essential
+"${SUDO[@]}" apt-get update -y
+"${SUDO[@]}" apt-get install -y curl git build-essential
 
 if ! command -v node >/dev/null 2>&1; then
-  curl -fsSL "$NODE_SCRIPT" | bash -
-  apt-get install -y nodejs
+  if [[ ${#SUDO[@]} -gt 0 ]]; then
+    curl -fsSL "$NODE_SCRIPT" | sudo bash -
+    sudo apt-get install -y nodejs
+  else
+    curl -fsSL "$NODE_SCRIPT" | bash -
+    apt-get install -y nodejs
+  fi
 fi
 
 if ! command -v pm2 >/dev/null 2>&1; then
-  npm install -g pm2
+  "${SUDO[@]}" npm install -g pm2
 fi
 
 mkdir -p "$APP_PARENT_DIR"
