@@ -137,13 +137,15 @@ function MetricsDisplay({
   districtName,
   history,
   timeRange,
-  onTimeRangeChange
+  onTimeRangeChange,
+  historyLoading = false
 }: { 
   metrics: DashboardMetrics; 
   districtName: string;
   history: HistoricalData[];
   timeRange: "3" | "6" | "12";
   onTimeRangeChange: (range: "3" | "6" | "12") => void;
+  historyLoading?: boolean;
 }) {
   // Calculate Job Card Activation Rate with safety checks
   const jobCardActivationRate = (metrics.totalWorkers && metrics.activeJobCards && metrics.totalWorkers > 0)
@@ -383,6 +385,7 @@ function MetricsDisplay({
                     variant={timeRange === "3" ? "default" : "outline"}
                     size="sm"
                     onClick={() => onTimeRangeChange("3")}
+                    disabled={historyLoading}
                   >
                     3M
                   </Button>
@@ -390,6 +393,7 @@ function MetricsDisplay({
                     variant={timeRange === "6" ? "default" : "outline"}
                     size="sm"
                     onClick={() => onTimeRangeChange("6")}
+                    disabled={historyLoading}
                   >
                     6M
                   </Button>
@@ -397,13 +401,19 @@ function MetricsDisplay({
                     variant={timeRange === "12" ? "default" : "outline"}
                     size="sm"
                     onClick={() => onTimeRangeChange("12")}
+                    disabled={historyLoading}
                   >
                     1Y
                   </Button>
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="relative">
+              {historyLoading && (
+                <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-10 rounded-b-lg">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                </div>
+              )}
               <MultiMetricTrendChart data={history} />
             </CardContent>
           </Card>
@@ -421,11 +431,13 @@ function DashboardContent() {
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null);
   const [history, setHistory] = useState<HistoricalData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [timeRange, setTimeRange] = useState<"3" | "6" | "12">("6"); // Default 6 months
 
+  // Initial data fetch (dashboard + history)
   useEffect(() => {
-    async function fetchData() {
+    async function fetchInitialData() {
       if (!districtCode) {
         setLoading(false);
         return;
@@ -457,8 +469,29 @@ function DashboardContent() {
       }
     }
 
-    fetchData();
-  }, [districtCode, timeRange]);
+    fetchInitialData();
+  }, [districtCode]);
+
+  // Fetch only history data when time range changes
+  useEffect(() => {
+    async function fetchHistoryData() {
+      if (!districtCode || loading) return; // Skip if still loading initial data
+
+      setHistoryLoading(true);
+      
+      try {
+        const historyRes = await fetch(`/api/history?district=${districtCode}&range=${timeRange}`);
+        const historyData = historyRes.ok ? await historyRes.json() : { history: [] };
+        setHistory(historyData.history || []);
+      } catch (err) {
+        console.error('History fetch error:', err);
+      } finally {
+        setHistoryLoading(false);
+      }
+    }
+
+    fetchHistoryData();
+  }, [timeRange, districtCode, loading]);
 
   if (loading) {
     return (
@@ -478,6 +511,7 @@ function DashboardContent() {
       history={history} 
       timeRange={timeRange}
       onTimeRangeChange={setTimeRange}
+      historyLoading={historyLoading}
     />;
   }
 
