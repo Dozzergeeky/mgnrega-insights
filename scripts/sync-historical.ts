@@ -1,30 +1,16 @@
+#!/usr/bin/env node
+/**
+ * Historical Data Sync Script
+ * 
+ * IMPORTANT: This script requires environment variables to be loaded.
+ * Use the npm script which handles this automatically:
+ * 
+ *   npm run sync:historical [months]
+ * 
+ * The npm script uses scripts/run-sync-historical.sh which loads .env.local
+ */
+
 import process from "node:process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
-
-// Load .env.local manually for standalone scripts (must be before other imports)
-const envPath = resolve(process.cwd(), '.env.local');
-try {
-  const envContent = readFileSync(envPath, 'utf-8');
-  envContent.split('\n').forEach(line => {
-    line = line.trim();
-    if (!line || line.startsWith('#')) return;
-    const match = line.match(/^([^=]+)=(.*)$/);
-    if (match) {
-      const key = match[1].trim();
-      const value = match[2].trim();
-      if (!process.env[key]) {
-        process.env[key] = value;
-      }
-    }
-  });
-  console.log('Loaded .env.local');
-  console.log('MGNREGA_API_KEY:', process.env.MGNREGA_API_KEY ? 'SET' : 'NOT SET');
-  console.log('MGNREGA_RESOURCE_ID:', process.env.MGNREGA_RESOURCE_ID ? 'SET' : 'NOT SET');
-} catch (error) {
-  console.warn('Could not load .env.local:', error instanceof Error ? error.message : String(error));
-}
-
 import { listDistricts } from "@/lib/districts";
 import { formatPeriod, fetchMonthlyDistrictPerformance } from "@/lib/mgnrega";
 import { getMongoClient, getMongoDb } from "@/lib/mongodb";
