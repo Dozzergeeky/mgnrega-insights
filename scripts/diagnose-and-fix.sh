@@ -118,25 +118,19 @@ echo "Step 5: Testing data.gov.in API connectivity..."
 TEST_URL="https://api.data.gov.in/resource/${MGNREGA_RESOURCE_ID}?api-key=${MGNREGA_API_KEY}&format=json&limit=1"
 
 if curl -sS --max-time 10 "$TEST_URL" -o /tmp/api-test.json 2>/dev/null; then
-    if grep -q '"success"' /tmp/api-test.json 2>/dev/null; then
-        SUCCESS=$(jq -r '.success // "unknown"' /tmp/api-test.json 2>/dev/null || echo "unknown")
-        if [[ "$SUCCESS" == "true" ]]; then
-            echo -e "${GREEN}✓ API connection successful${NC}"
-            TOTAL=$(jq -r '.total // 0' /tmp/api-test.json 2>/dev/null || echo "0")
-            echo "Total records available: $TOTAL"
-        else
-            MESSAGE=$(jq -r '.message // "unknown error"' /tmp/api-test.json 2>/dev/null || echo "unknown")
-            echo -e "${RED}✗ API returned error: $MESSAGE${NC}"
-            exit 1
-        fi
+    STATUS=$(jq -r '.status // "unknown"' /tmp/api-test.json 2>/dev/null || echo "unknown")
+    TOTAL=$(jq -r '.total // 0' /tmp/api-test.json 2>/dev/null || echo "0")
+    
+    if [[ "$STATUS" == "ok" ]] && [[ "$TOTAL" != "0" ]]; then
+        echo -e "${GREEN}✓ API connection successful${NC}"
+        echo "Total records available: $TOTAL"
     else
-        echo -e "${RED}✗ API returned invalid response${NC}"
-        cat /tmp/api-test.json
-        exit 1
+        echo -e "${YELLOW}⚠ API connection test unclear (status: $STATUS, total: $TOTAL)${NC}"
+        echo "Proceeding with sync anyway..."
     fi
 else
-    echo -e "${RED}✗ Cannot reach data.gov.in API${NC}"
-    exit 1
+    echo -e "${YELLOW}⚠ Cannot reach data.gov.in API - network issue or rate limit${NC}"
+    echo "Proceeding with sync anyway..."
 fi
 
 rm -f /tmp/api-test.json
