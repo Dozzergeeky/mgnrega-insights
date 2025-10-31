@@ -53,8 +53,8 @@ export async function GET(request: Request) {
     const now = new Date();
     const periods = [];
     for (let i = 11; i >= 0; i--) {
-      const date = new Date(now);
-      date.setMonth(date.getMonth() - i);
+      // Use day 1 to avoid month overflow issues
+      const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, "0");
       periods.push(`${year}-${month}`);
@@ -78,20 +78,32 @@ export async function GET(request: Request) {
         const rawRecords = Array.isArray(record.records) ? record.records : [];
         const dataGovRecords = rawRecords.filter(isDataGovRecord);
 
-        const workDemand = sumField(dataGovRecords, "Persondays_of_Central_Liability_so_far");
-        const wagePayments = sumField(dataGovRecords, "Wages");
+        // Use Total_Exp (in lakhs) instead of Wages which contains 0
+        const totalExpLakhs = sumField(dataGovRecords, "Total_Exp");
+        const wagePayments = totalExpLakhs * 100000; // Convert lakhs to rupees
         const worksCompleted = sumField(dataGovRecords, "Number_of_Completed_Works");
         const worksOngoing = sumField(dataGovRecords, "Number_of_Ongoing_Works");
+        const worksTakenUp = sumField(dataGovRecords, "Total_No_of_Works_Takenup");
         const activeWorkers = sumField(dataGovRecords, "Total_No_of_Active_Workers");
         
         const totalWorks = worksCompleted + worksOngoing;
-        const completionRate = totalWorks > 0 ? (worksCompleted / totalWorks) * 100 : 0;
+        // Use totalWorks instead of person-days which are often 0
+        const workDemand = totalWorks;
+        
+        // Calculate Works Implementation Rate: shows percentage of sanctioned works actively being implemented
+        const implementationRate = worksTakenUp > 0 
+          ? ((worksOngoing + worksCompleted) / worksTakenUp) * 100 
+          : 0;
+        
+        const formattedCompletionRate = implementationRate < 1 
+          ? Math.round(implementationRate * 100) / 100
+          : Math.round(implementationRate * 10) / 10;
         
         return {
           month: date.toLocaleDateString("en-IN", { month: "short", year: "numeric" }),
           workDemand: Math.round(workDemand),
           wagePayments: Math.round(wagePayments),
-          completionRate: Math.round(completionRate * 10) / 10,
+          completionRate: formattedCompletionRate,
           activeWorkers: Math.round(activeWorkers),
         };
       });

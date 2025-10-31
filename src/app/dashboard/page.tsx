@@ -99,8 +99,8 @@ function MetricsDisplay({
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
-            <CardTitle>Work Demand</CardTitle>
-            <CardDescription>Job cards issued this month</CardDescription>
+            <CardTitle>Total Works</CardTitle>
+            <CardDescription>Projects undertaken this period</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold text-primary">{metrics.workDemand.toLocaleString("en-IN")}</p>
@@ -123,13 +123,13 @@ function MetricsDisplay({
 
         <Card>
           <CardHeader>
-            <CardTitle>Progress</CardTitle>
-            <CardDescription>Overall project completion</CardDescription>
+            <CardTitle>Implementation Progress</CardTitle>
+            <CardDescription>Works actively under execution</CardDescription>
           </CardHeader>
           <CardContent>
             <p className="text-4xl font-bold text-blue-600">{metrics.completionRate}%</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              {metrics.completedProjects} of {metrics.totalProjects} projects done
+              {metrics.completedProjects} completed, {metrics.totalProjects - metrics.completedProjects} ongoing
             </p>
           </CardContent>
         </Card>

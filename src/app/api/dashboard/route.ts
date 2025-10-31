@@ -47,21 +47,36 @@ export async function GET(request: Request) {
       const dataGovRecords = record.records.filter(isDataGovRecord);
 
       if (dataGovRecords.length > 0) {
-        const workDemand = sumField(dataGovRecords, "Persondays_of_Central_Liability_so_far");
-        const wagePayments = sumField(dataGovRecords, "Wages");
+        // Use Total_Exp (in lakhs) and convert to rupees
+        const totalExpLakhs = sumField(dataGovRecords, "Total_Exp");
+        console.log(`[Dashboard API] District ${districtCode}: Total_Exp lakhs = ${totalExpLakhs}, records = ${dataGovRecords.length}`);
+        const wagePayments = totalExpLakhs * 100000; // Convert lakhs to rupees
         const worksCompleted = sumField(dataGovRecords, "Number_of_Completed_Works");
         const worksOngoing = sumField(dataGovRecords, "Number_of_Ongoing_Works");
+        const worksTakenUp = sumField(dataGovRecords, "Total_No_of_Works_Takenup");
         const activeWorkers = sumField(dataGovRecords, "Total_No_of_Active_Workers");
 
         const totalProjects = worksCompleted + worksOngoing;
-        const completionRate = totalProjects > 0 ? (worksCompleted / totalProjects) * 100 : 0;
+        // Use totalProjects as the metric instead of person-days (which are often 0 in the API)
+        const workDemand = totalProjects;
+        
+        // Calculate Works Implementation Rate: shows percentage of sanctioned works actively being implemented
+        // This is a positive metric showing active execution rather than completion rate
+        const implementationRate = worksTakenUp > 0 
+          ? ((worksOngoing + worksCompleted) / worksTakenUp) * 100 
+          : 0;
+        
+        // Format based on value
+        const formattedCompletionRate = implementationRate < 1 
+          ? Math.round(implementationRate * 100) / 100
+          : Math.round(implementationRate * 10) / 10;
 
         return NextResponse.json({
           districtCode,
           metrics: {
             workDemand: Math.round(workDemand),
             wagePayments: Math.round(wagePayments),
-            completionRate: Math.round(completionRate * 10) / 10,
+            completionRate: formattedCompletionRate,
             activeWorkers: Math.round(activeWorkers),
             totalProjects,
             completedProjects: worksCompleted,

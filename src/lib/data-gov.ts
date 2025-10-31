@@ -1,17 +1,25 @@
 export type DataGovRecord = {
   Persondays_of_Central_Liability_so_far?: string | number | null;
   Wages?: string | number | null;
+  Total_Exp?: string | number | null;
   Number_of_Completed_Works?: string | number | null;
   Number_of_Ongoing_Works?: string | number | null;
   Total_No_of_Active_Workers?: string | number | null;
+  Total_No_of_Works_Takenup?: string | number | null;
+  Total_No_of_Workers?: string | number | null;
+  Total_No_of_Active_Job_Cards?: string | number | null;
 };
 
 const numericKeys = [
   "Persondays_of_Central_Liability_so_far",
   "Wages",
+  "Total_Exp",
   "Number_of_Completed_Works",
   "Number_of_Ongoing_Works",
   "Total_No_of_Active_Workers",
+  "Total_No_of_Works_Takenup",
+  "Total_No_of_Workers",
+  "Total_No_of_Active_Job_Cards",
 ] as const;
 
 export type NumericField = (typeof numericKeys)[number];
