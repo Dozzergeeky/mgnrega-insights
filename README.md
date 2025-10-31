@@ -218,9 +218,10 @@ npm run db:down   # stop and remove the Dockerized MongoDB container
 
 ## Live Deployment
 
-- **Production URL**: https://mgnrega-2n74in54e-dozzergeekys-projects.vercel.app
+- **Vercel URL**: https://mgnrega-2n74in54e-dozzergeekys-projects.vercel.app
+- **VPS URL**: http://172.105.36.247
 - **GitHub Repository**: https://github.com/Dozzergeeky/mgnrega-insights
-- **Platform**: Vercel (serverless)
+- **Platforms**: Vercel (serverless) + Linode VPS (Ubuntu + PM2 + Nginx)
 
 ## Deployment Notes
 

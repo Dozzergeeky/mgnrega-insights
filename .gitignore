@@ -54,3 +54,8 @@ next-env.d.ts
 /DEPLOYMENT.md
 /PRODUCTION-CHECKLIST.md
 /QUICKSTART.md
+
+# deployment scripts with sensitive credentials
+scripts/*.exp
+scripts/deploy-*.sh
+scripts/*-linode.sh
