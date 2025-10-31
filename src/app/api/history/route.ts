@@ -95,9 +95,12 @@ export async function GET(request: Request) {
           ? ((worksOngoing + worksCompleted) / worksTakenUp) * 100 
           : 0;
         
-        const formattedCompletionRate = implementationRate < 1 
-          ? Math.round(implementationRate * 100) / 100
-          : Math.round(implementationRate * 10) / 10;
+        // Keep precision, cap at 99.99% to show there's always room for improvement
+        const formattedCompletionRate = implementationRate >= 100 
+          ? 99.99
+          : (implementationRate < 1 
+              ? Math.round(implementationRate * 100) / 100
+              : Math.round(implementationRate * 10) / 10);
         
         return {
           period: record.period,

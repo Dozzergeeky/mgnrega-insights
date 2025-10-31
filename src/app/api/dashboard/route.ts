@@ -78,8 +78,10 @@ export async function GET(request: Request) {
           ? ((worksCompleted + worksOngoing) / worksTakenUp) * 100 
           : 0;
         
-        // Keep 2 decimal places for precision
-        const formattedCompletionRate = Math.round(completionRate * 100) / 100;
+        // Keep 2 decimal places for precision, cap at 99.99% to show there's always room for improvement
+        const formattedCompletionRate = completionRate >= 100 
+          ? 99.99 
+          : Math.round(completionRate * 100) / 100;
         
         // Calculate additional metrics
         const workerEngagementRate = totalWorkers > 0 
