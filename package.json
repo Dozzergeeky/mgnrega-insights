@@ -11,7 +11,8 @@
     "db:up": "docker compose up -d mongo",
     "db:down": "docker compose down",
     "seed:districts": "tsx scripts/seed-districts.ts",
-    "sync:mgnrega": "tsx scripts/sync-mgnrega.ts"
+    "sync:mgnrega": "tsx scripts/sync-mgnrega.ts",
+    "sync:historical": "tsx scripts/sync-historical.ts"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.3",

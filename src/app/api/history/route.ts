@@ -120,18 +120,19 @@ export async function GET(request: Request) {
           wagePayments: Math.round(wagePayments),
           completionRate: formattedCompletionRate,
           activeWorkers: Math.round(activeWorkers),
+          isInterpolated: false as boolean,
         };
       });
 
-      // Fill missing months with interpolated data to always show 6 months
+      // Fill missing months with interpolated data to always show requested months
       const history: any[] = [];
       const realDataMap = new Map(realHistory.map(h => [h.period, h]));
       
       for (const period of periods) {
         if (realDataMap.has(period)) {
           const data = realDataMap.get(period)!;
-          delete data.period; // Remove period field before sending
-          history.push(data);
+          const { period: _, ...dataWithoutPeriod } = data; // Remove period field
+          history.push(dataWithoutPeriod);
         } else {
           // Generate mock data for missing month based on district pattern
           const [year, month] = period.split("-");
@@ -155,6 +156,7 @@ export async function GET(request: Request) {
             wagePayments: Math.round(avgReal.wagePayments * randomFactor),
             completionRate: Math.round((92 + monthSeed % 8) * 10) / 10, // 92-99.9%
             activeWorkers: Math.round(avgReal.activeWorkers * randomFactor),
+            isInterpolated: true, // Mark as interpolated data
           });
         }
       }

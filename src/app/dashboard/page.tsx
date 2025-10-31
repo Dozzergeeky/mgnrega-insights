@@ -30,6 +30,7 @@ interface HistoricalData {
   wagePayments: number;
   completionRate: number;
   activeWorkers?: number;
+  isInterpolated?: boolean;
 }
 
 function formatCurrency(amount: number): string {
@@ -84,51 +85,165 @@ function WorkerEngagementChart({ metrics }: { metrics: DashboardMetrics }) {
 function MultiMetricTrendChart({ data }: { data: HistoricalData[] }) {
   if (data.length === 0) return null;
 
-  const chartData = data.map(record => ({
+  // Separate real and interpolated data points
+  const chartData = data.map((record) => ({
     month: record.month.substring(0, 3),
     completion: record.completionRate,
     wages: record.wagePayments / 10000000, // Convert to Crores
     workers: record.activeWorkers ? record.activeWorkers / 1000 : 0, // Convert to thousands
+    isInterpolated: record.isInterpolated || false,
+    // For dashed lines: set values to null for interpolated points on the "real" line
+    // and vice versa for the "interpolated" line
+    completionReal: !record.isInterpolated ? record.completionRate : null,
+    completionInterpolated: record.isInterpolated ? record.completionRate : null,
+    wagesReal: !record.isInterpolated ? record.wagePayments / 10000000 : null,
+    wagesInterpolated: record.isInterpolated ? record.wagePayments / 10000000 : null,
+    workersReal: !record.isInterpolated && record.activeWorkers ? record.activeWorkers / 1000 : null,
+    workersInterpolated: record.isInterpolated && record.activeWorkers ? record.activeWorkers / 1000 : null,
   }));
 
+  // Calculate data quality
+  const realCount = data.filter(d => !d.isInterpolated).length;
+  const interpolatedCount = data.filter(d => d.isInterpolated).length;
+  const realPercentage = Math.round((realCount / data.length) * 100);
+
   return (
-    <ResponsiveContainer width="100%" height={300}>
-      <LineChart data={chartData}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="month" />
-        <YAxis yAxisId="left" />
-        <YAxis yAxisId="right" orientation="right" />
-        <Tooltip />
-        <Legend />
-        <Line
-          yAxisId="left"
-          type="monotone"
-          dataKey="completion"
-          stroke="#3b82f6"
-          strokeWidth={2}
-          name="Completion %"
-          dot={{ r: 4 }}
-        />
-        <Line
-          yAxisId="right"
-          type="monotone"
-          dataKey="wages"
-          stroke="#10b981"
-          strokeWidth={2}
-          name="Wages (Cr)"
-          dot={{ r: 4 }}
-        />
-        <Line
-          yAxisId="right"
-          type="monotone"
-          dataKey="workers"
-          stroke="#f59e0b"
-          strokeWidth={2}
-          name="Workers (K)"
-          dot={{ r: 4 }}
-        />
-      </LineChart>
-    </ResponsiveContainer>
+    <div className="space-y-2">
+      {interpolatedCount > 0 && (
+        <div className="flex items-center justify-end gap-2 text-sm">
+          <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 rounded-full border border-amber-200 dark:border-amber-800">
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="font-medium">{realPercentage}% Real Data</span>
+            <span className="text-xs opacity-75">({interpolatedCount} month{interpolatedCount > 1 ? 's' : ''} estimated)</span>
+          </div>
+        </div>
+      )}
+      <ResponsiveContainer width="100%" height={300}>
+        <LineChart data={chartData}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis 
+            dataKey="month" 
+            tick={({ x, y, payload }) => {
+              const point = chartData[payload.index];
+              return (
+                <g transform={`translate(${x},${y})`}>
+                  <text 
+                    x={0} 
+                    y={0} 
+                    dy={16} 
+                    textAnchor="middle" 
+                    fill={point.isInterpolated ? "#f59e0b" : "#666"}
+                    opacity={point.isInterpolated ? 0.7 : 1}
+                    fontSize={12}
+                  >
+                    {payload.value}
+                  </text>
+                </g>
+              );
+            }}
+          />
+          <YAxis yAxisId="left" />
+          <YAxis yAxisId="right" orientation="right" />
+          <Tooltip 
+            content={({ active, payload }) => {
+              if (!active || !payload || payload.length === 0) return null;
+              const data = payload[0].payload;
+              return (
+                <div className="bg-white dark:bg-gray-800 p-3 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
+                  <p className="font-semibold mb-2">{data.month}</p>
+                  {data.isInterpolated && (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-2 flex items-center gap-1">
+                      <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Estimated Data
+                    </p>
+                  )}
+                  <p className="text-sm">Completion: <span className="font-medium text-blue-600">{data.completion}%</span></p>
+                  <p className="text-sm">Wages: <span className="font-medium text-green-600">₹{data.wages.toFixed(2)} Cr</span></p>
+                  <p className="text-sm">Workers: <span className="font-medium text-orange-600">{data.workers.toFixed(1)}K</span></p>
+                </div>
+              );
+            }}
+          />
+          <Legend />
+          {/* Real data lines - solid */}
+          <Line
+            yAxisId="left"
+            type="monotone"
+            dataKey="completionReal"
+            stroke="#3b82f6"
+            strokeWidth={2}
+            name="Completion % (Real)"
+            dot={{ r: 4, fill: "#3b82f6" }}
+            connectNulls={false}
+          />
+          <Line
+            yAxisId="right"
+            type="monotone"
+            dataKey="wagesReal"
+            stroke="#10b981"
+            strokeWidth={2}
+            name="Wages Cr (Real)"
+            dot={{ r: 4, fill: "#10b981" }}
+            connectNulls={false}
+          />
+          <Line
+            yAxisId="right"
+            type="monotone"
+            dataKey="workersReal"
+            stroke="#f59e0b"
+            strokeWidth={2}
+            name="Workers K (Real)"
+            dot={{ r: 4, fill: "#f59e0b" }}
+            connectNulls={false}
+          />
+          {/* Interpolated data lines - dashed */}
+          {interpolatedCount > 0 && (
+            <>
+              <Line
+                yAxisId="left"
+                type="monotone"
+                dataKey="completionInterpolated"
+                stroke="#3b82f6"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                name="Completion % (Est)"
+                dot={{ r: 4, fill: "#3b82f6", strokeDasharray: "0" }}
+                connectNulls={false}
+                opacity={0.6}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="wagesInterpolated"
+                stroke="#10b981"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                name="Wages Cr (Est)"
+                dot={{ r: 4, fill: "#10b981", strokeDasharray: "0" }}
+                connectNulls={false}
+                opacity={0.6}
+              />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="workersInterpolated"
+                stroke="#f59e0b"
+                strokeWidth={2}
+                strokeDasharray="5 5"
+                name="Workers K (Est)"
+                dot={{ r: 4, fill: "#f59e0b", strokeDasharray: "0" }}
+                connectNulls={false}
+                opacity={0.6}
+              />
+            </>
+          )}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
   );
 }
 
