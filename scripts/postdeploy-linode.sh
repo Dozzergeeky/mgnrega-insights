@@ -191,7 +191,7 @@ if [[ "$ENABLE_SSL_FLAG" == "true" && -n "$DOMAIN" && -n "$SSL_EMAIL" ]]; then
 	${SUDO[@]:-} certbot --nginx --non-interactive --agree-tos --email "$SSL_EMAIL" --redirect "${CERTBOT_DOMAINS[@]}"
 fi
 
-CRON_CMD="0 */6 * * * cd $APP_DIR && /usr/bin/npm run sync-mgnrega >> $LOG_FILE 2>&1"
+CRON_CMD="0 2 * * * /bin/bash $APP_DIR/scripts/cron-sync-data.sh"
 TMP_CRON=$(mktemp)
 if crontab -l >/dev/null 2>&1; then
 	crontab -l > "$TMP_CRON"
