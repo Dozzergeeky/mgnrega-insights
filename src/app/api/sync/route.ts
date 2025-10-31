@@ -83,7 +83,7 @@ export async function POST(req: Request) {
             continue;
           }
 
-          await upsertDistrict(collection, district, year, month, period, records);
+          await upsertDistrict(collection, district, period, records);
           results.successes += 1;
           results.details.push({ district: district.name, code: district.code, records: records.length });
         } catch (err) {
@@ -110,8 +110,6 @@ export async function POST(req: Request) {
 async function upsertDistrict(
   collection: Collection<DistrictMetricDocument>,
   district: District,
-  year: number,
-  month: number,
   period: string,
   records: unknown[]
 ) {
