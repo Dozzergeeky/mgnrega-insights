@@ -351,13 +351,13 @@ function MetricsDisplay({
         >
           <Card>
             <CardHeader>
-              <CardTitle>Implementation Progress</CardTitle>
-              <CardDescription>Works actively under execution</CardDescription>
+              <CardTitle>Work Completion Rate</CardTitle>
+              <CardDescription>Person-days of work completed</CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-4xl font-bold text-blue-600">{safeMetrics.completionRate}%</p>
+              <p className="text-4xl font-bold text-green-600">{safeMetrics.completionRate}%</p>
               <p className="mt-2 text-sm text-muted-foreground">
-                {safeMetrics.completedProjects} completed, {safeMetrics.ongoingProjects} ongoing
+                {safeMetrics.ongoingProjects.toLocaleString("en-IN")} active projects
               </p>
             </CardContent>
           </Card>
@@ -457,17 +457,17 @@ function MetricsDisplay({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between border-b pb-3">
-                <span className="text-sm font-medium">Total Projects</span>
-                <span className="text-lg font-semibold">{metrics.totalProjects}</span>
+                <span className="text-sm font-medium">Active Works</span>
+                <span className="text-lg font-semibold text-blue-600">{metrics.ongoingProjects.toLocaleString("en-IN")}</span>
               </div>
               <div className="flex items-center justify-between border-b pb-3">
-                <span className="text-sm font-medium">Completed Projects</span>
-                <span className="text-lg font-semibold text-green-600">{metrics.completedProjects}</span>
+                <span className="text-sm font-medium">Completed This Period</span>
+                <span className="text-lg font-semibold text-green-600">{metrics.completedProjects.toLocaleString("en-IN")}</span>
               </div>
               <div className="flex items-center justify-between border-b pb-3">
-                <span className="text-sm font-medium">In Progress</span>
-                <span className="text-lg font-semibold text-blue-600">
-                  {metrics.ongoingProjects}
+                <span className="text-sm font-medium">Total Works Taken Up</span>
+                <span className="text-lg font-semibold">
+                  {metrics.totalProjects.toLocaleString("en-IN")}
                 </span>
               </div>
               <div className="flex items-center justify-between">

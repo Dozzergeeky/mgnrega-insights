@@ -135,15 +135,15 @@ killall Finder
 #### Post-recording (Loom)
 
 1. Trim dead air at the beginning and end.
-2. Add a call-to-action: “Links are below 👇”.
+2. Add a call-to-action: "Links are below 👇".
 3. Select a custom thumbnail (dashboard screenshot).
 4. Add chapter markers:
    - 0:00 Intro
    - 0:15 Problem
    - 0:25 Demo
-   - 0:45 Dashboard
-   - 1:05 Architecture
-   - 1:35 Deployment
+   - 0:50 Dashboard
+   - 1:15 Architecture
+   - 1:40 Deployment
 
 ---
 
@@ -201,9 +201,9 @@ You’ve got this! 🎬🚀
 
 ### Setup
 
-- Open the production app in a browser: [MGNREGA Insights (Production)](https://mgnrega-65zx9n5i7-dozzergeekys-projects.vercel.app)
+- Open the production app in a browser: [MGNREGA Insights VPS](http://172.105.36.247) (preferred for demo) or [Vercel](https://mgnrega-2n74in54e-dozzergeekys-projects.vercel.app)
 - Have VS Code open with the key files ready (see Handy File Pointers below).
-- Test browser geolocation permission beforehand.
+- Have screenshots folder open to reference visual examples.
 - Clear the browser cache for a clean demo.
 - Use a standard screen size (1920×1080 or 1440×900).
 
@@ -220,7 +220,7 @@ You’ve got this! 🎬🚀
 ## Script
 
 0:00 — Intro
-**[SHOW: Production homepage]**
+**[SHOW: Production homepage at http://172.105.36.247]**
 
 - Hello! This is "Our Voice | MGNREGA Insights". It makes complex MGNREGA data simple for rural citizens.
 - Built for low-literacy users: big text, icons, bilingual copy, and audio-ready content.
@@ -233,37 +233,62 @@ You’ve got this! 🎬🚀
 
 - Goal: Show district performance now and over time, simply and reliably, even during API outages.
 
-0:25 — Live Demo
-**[ACTION: Hover over "Select District" button, then click]**
+0:25 — Live Demo: Smart Location Detection
+**[SHOW: Home page with district picker section visible]**
 
-- Landing page: Clear headline and bilingual trust badge. Click "Select District".
-**[SHOW: District picker dropdown, scroll through a few districts]**
+- Landing page: Clear headline and bilingual trust badge.
+**[SCROLL TO: District picker section showing the two location detection buttons]**
 
-- District picker: Manual selection plus "Detect My District" using browser location (validates WB bounds).
-**[ACTION: Select "Kolkata" from dropdown, then click "Continue to Dashboard"]**
+- NEW: Two ways to detect your location automatically:
+  - **"🌍 Detect via IP"** - Works on HTTP, no permissions needed, instant city-level detection
+  - **"📍 GPS (Precise)"** - More accurate but requires HTTPS and browser permission
+**[ACTION: Click "🌍 Detect via IP" button]**
+**[SHOW: Success message appears showing detected district]**
+- IP detection identifies your district instantly using ipapi.co - no HTTPS required!
+**[ACTION: Alternatively show the manual district dropdown, scroll through a few districts]**
+- Or select manually from all 23 West Bengal districts.
+**[ACTION: Click "Continue to Dashboard" with Kolkata selected]**
 **[SHOW: Loading spinner briefly, then dashboard loads with data]**
-- Click "Continue to Dashboard" → dashboard loads with real-time data fetching and smooth loading state.
+- Dashboard loads with smooth transitions and real-time data fetching.
 
-0:45 — Dashboard Highlights
+0:50 — Dashboard Highlights
 **[SHOW: Dashboard with all metrics visible, hover over each card as you mention it]**
 
-- Four key metrics:
-  - Work Demand (person-days)
+- Six key metric cards with icons and color coding:
+  - Total Works (Work Demand with person-days)
   - Wage Payments (₹)
-  - Completion Rate (%)
-  - Project Summary (completed vs total)
-**[SCROLL DOWN: Show the 6-month trend chart]**
-**[ACTION: Hover over trend bars to show tooltips]**
-- 6-month historical trend shows progress over time.
-**[PAN CAMERA: Show overall layout]**
-- Designed for low literacy: minimal text, color cues, large tap targets.
+  - Work Completion Rate (Person-days completed %)
+  - Worker Engagement (Active vs Total Workers %)
+  - Job Card Activation Rate
+  - Average Wage per Worker
+**[SCROLL DOWN: Show the Worker Engagement Distribution pie chart]**
+**[ACTION: Hover over pie chart segments]**
+- Visual pie chart showing Active vs Inactive workers with percentage breakdown
+- Interactive tooltips display exact worker counts in each segment
+**[SCROLL DOWN: Show the Multi-Metric Performance Trend chart with 3M/6M/1Y buttons]**
+**[ACTION: Click time range buttons to show dynamic switching]**
+- Interactive time range selector: Switch between 3 months, 6 months, or 1 year
+- Chart updates instantly without page reload - optimized for performance
+**[ACTION: Hover over chart lines to show tooltips with month details]**
+- Hover over data points to see detailed monthly breakdown with all three metrics
+- Multi-metric line chart tracking completion rate, wages, and active workers simultaneously
+**[SHOW: Dashed lines vs solid lines in the chart]**
+- Visual distinction: Dashed lines = interpolated estimates; Solid lines = real data from data.gov.in
+- Amber badge displays data quality: "X% Real Data (Y months estimated)"
+- Currently showing 50% real historical data (6 out of 12 months)
+- Month labels are color-coded: gray for real data, amber for interpolated months
+**[PAN CAMERA: Show overall layout including back button and responsive design]**
+- Clean, accessible design: minimal text, color cues, large tap targets for low-literacy users.
 
-1:05 — Architecture
+1:15 — Architecture
 **[SWITCH TO: VS Code with src/app/dashboard/page.tsx open]**
 **[SCROLL THROUGH: Show client component with Suspense, useEffect, useState]**
 
 - Next.js 16 App Router + React 19 + Tailwind v4 + shadcn/ui.
 - Client-side dashboard with Suspense boundaries for optimal UX.
+**[SWITCH TO: src/components/district-picker.tsx]**
+**[HIGHLIGHT: IP detection function using ipapi.co]**
+- NEW: IP-based geolocation using ipapi.co API - works on HTTP without browser permissions
 **[SWITCH TO: src/app/api/dashboard/route.ts]**
 **[HIGHLIGHT: API endpoint structure]**
 
@@ -276,7 +301,7 @@ You’ve got this! 🎬🚀
   3) Realistic mock fallback if DB/API unavailable (ensures 100% uptime).
   4) Client-side data fetching with loading states and error handling.
 
-1:20 — Real Data Integration
+1:30 — Real Data Integration
 **[SWITCH TO: src/lib/mgnrega.ts]**
 **[SCROLL TO: fetchMonthlyDistrictPerformance function]**
 
@@ -291,7 +316,7 @@ You’ve got this! 🎬🚀
 
 - Dashboard fetches data client-side with useEffect; shows loading spinner; falls back to mock when needed → 100% availability.
 
-1:35 — Production Readiness
+1:40 — Production Readiness
 **[SHOW: Browser address bar highlighting the VPS URL]**
 
 - Deployed on Linode VPS ([http://172.105.36.247](http://172.105.36.247)) and Vercel ([production deployment](https://mgnrega-2n74in54e-dozzergeekys-projects.vercel.app)).
@@ -320,7 +345,7 @@ You’ve got this! 🎬🚀
   - **DEPLOYMENT.md** - Deployment instructions
   - **DATA-INTEGRATION.md** - Real data setup
 
-**[SHOW: scripts/ directory with 34+ deployment scripts]**
+**[SHOW: scripts/ directory with key operational scripts]**
 
 - 34 deployment automation scripts for easy server management
 - One-command operations: restart app, check health, run backups, sync data
@@ -338,7 +363,7 @@ You’ve got this! 🎬🚀
   4. Alert checking (every 5 min)
   5. Daily health summary (9 AM)
 
-1:50 — Close
+1:55 — Close
 **[SWITCH BACK: To production dashboard showing full page]**
 
 - Impact: Accessible insights for 12.15 Cr Indians.
