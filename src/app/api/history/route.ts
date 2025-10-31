@@ -49,10 +49,10 @@ export async function GET(request: Request) {
     const db = await getMongoDb();
     const metricsCollection = db.collection("district_metrics");
 
-    // Get last 12 months of periods
+    // Get last 6 months of periods
     const now = new Date();
     const periods = [];
-    for (let i = 11; i >= 0; i--) {
+    for (let i = 5; i >= 0; i--) {
       // Use day 1 to avoid month overflow issues
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const year = date.getFullYear();

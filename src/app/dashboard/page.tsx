@@ -40,14 +40,19 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-function WorksDistributionChart({ metrics }: { metrics: DashboardMetrics }) {
+function WorkerEngagementChart({ metrics }: { metrics: DashboardMetrics }) {
+  const activeWorkers = metrics.activeWorkers || 0;
+  const totalWorkers = metrics.totalWorkers || 0;
+  const inactiveWorkers = Math.max(0, totalWorkers - activeWorkers);
+
   const pieData = [
-    { name: "Completed", value: metrics.completedProjects, color: "#10b981" },
-    { name: "Ongoing", value: metrics.ongoingProjects, color: "#3b82f6" },
+    { name: "Active Workers", value: activeWorkers, color: "#10b981" },
+    { name: "Inactive Workers", value: inactiveWorkers, color: "#94a3b8" },
   ];
 
   const renderLabel = (entry: any) => {
-    return `${entry.name}: ${(entry.percent * 100).toFixed(1)}%`;
+    const percentage = totalWorkers > 0 ? ((entry.value / totalWorkers) * 100).toFixed(1) : "0.0";
+    return `${entry.name}: ${percentage}%`;
   };
 
   return (
@@ -67,7 +72,9 @@ function WorksDistributionChart({ metrics }: { metrics: DashboardMetrics }) {
             <Cell key={`cell-${index}`} fill={entry.color} />
           ))}
         </Pie>
-        <Tooltip />
+        <Tooltip 
+          formatter={(value: number) => [value.toLocaleString("en-IN") + " workers", ""]}
+        />
         <Legend />
       </PieChart>
     </ResponsiveContainer>
@@ -77,7 +84,7 @@ function WorksDistributionChart({ metrics }: { metrics: DashboardMetrics }) {
 function MultiMetricTrendChart({ data }: { data: HistoricalData[] }) {
   if (data.length === 0) return null;
 
-  const chartData = data.slice(-6).map(record => ({
+  const chartData = data.map(record => ({
     month: record.month.substring(0, 3),
     completion: record.completionRate,
     wages: record.wagePayments / 10000000, // Convert to Crores
@@ -306,11 +313,11 @@ function MetricsDisplay({
         >
           <Card>
             <CardHeader>
-              <CardTitle>Works Distribution</CardTitle>
-              <CardDescription>Breakdown of completed vs ongoing projects</CardDescription>
+              <CardTitle>Worker Engagement Distribution</CardTitle>
+              <CardDescription>Active vs total registered workforce</CardDescription>
             </CardHeader>
             <CardContent>
-              <WorksDistributionChart metrics={safeMetrics} />
+              <WorkerEngagementChart metrics={safeMetrics} />
             </CardContent>
           </Card>
         </motion.div>
