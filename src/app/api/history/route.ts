@@ -41,18 +41,29 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const districtCode = searchParams.get("district");
+    const rangeParam = searchParams.get("range") || "6"; // Default to 6 months
 
     if (!districtCode) {
       return NextResponse.json({ error: "District code is required" }, { status: 400 });
     }
 
+    // Parse range parameter: "3m" (3 months), "6m" (6 months), "1y" (12 months)
+    let monthsToFetch = 6; // Default
+    if (rangeParam === "3" || rangeParam === "3m") {
+      monthsToFetch = 3;
+    } else if (rangeParam === "12" || rangeParam === "1y" || rangeParam === "year") {
+      monthsToFetch = 12;
+    } else if (rangeParam === "6" || rangeParam === "6m") {
+      monthsToFetch = 6;
+    }
+
     const db = await getMongoDb();
     const metricsCollection = db.collection("district_metrics");
 
-    // Get last 6 months of periods
+    // Get periods based on range
     const now = new Date();
     const periods = [];
-    for (let i = 5; i >= 0; i--) {
+    for (let i = monthsToFetch - 1; i >= 0; i--) {
       // Use day 1 to avoid month overflow issues
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const year = date.getFullYear();
@@ -151,17 +162,19 @@ export async function GET(request: Request) {
       return NextResponse.json({
         districtCode,
         history,
-        source: realHistory.length === 6 ? "real_data" : "mixed_data",
+        range: `${monthsToFetch}m`,
+        source: realHistory.length === monthsToFetch ? "real_data" : "mixed_data",
         realMonths: realHistory.length,
-        interpolatedMonths: 6 - realHistory.length,
+        interpolatedMonths: monthsToFetch - realHistory.length,
       });
     }
 
     // Return realistic mock historical data
-    const mockData = generateMockHistory(districtCode, 6);
+    const mockData = generateMockHistory(districtCode, monthsToFetch);
     return NextResponse.json({
       districtCode,
       history: mockData,
+      range: `${monthsToFetch}m`,
       source: "mock_data",
       message: "Using simulated historical data. Sync multiple months with 'npm run sync:mgnrega -- YYYY MM' to see real trends.",
     });
@@ -170,12 +183,19 @@ export async function GET(request: Request) {
     
     const { searchParams } = new URL(request.url);
     const districtCode = searchParams.get("district") || "WB-KOL";
+    const rangeParam = searchParams.get("range") || "6";
+    
+    // Parse range for fallback
+    let monthsToFetch = 6;
+    if (rangeParam === "3" || rangeParam === "3m") monthsToFetch = 3;
+    else if (rangeParam === "12" || rangeParam === "1y" || rangeParam === "year") monthsToFetch = 12;
 
     // Return mock data on error with realistic trends
-    const mockData = generateMockHistory(districtCode, 6);
+    const mockData = generateMockHistory(districtCode, monthsToFetch);
     return NextResponse.json({
       districtCode,
       history: mockData,
+      range: `${monthsToFetch}m`,
       source: "mock_data_fallback",
       message: "Database unavailable. Showing simulated trends.",
     });

@@ -135,11 +135,15 @@ function MultiMetricTrendChart({ data }: { data: HistoricalData[] }) {
 function MetricsDisplay({ 
   metrics, 
   districtName,
-  history 
+  history,
+  timeRange,
+  onTimeRangeChange
 }: { 
   metrics: DashboardMetrics; 
   districtName: string;
   history: HistoricalData[];
+  timeRange: "3" | "6" | "12";
+  onTimeRangeChange: (range: "3" | "6" | "12") => void;
 }) {
   // Calculate Job Card Activation Rate with safety checks
   const jobCardActivationRate = (metrics.totalWorkers && metrics.activeJobCards && metrics.totalWorkers > 0)
@@ -369,8 +373,35 @@ function MetricsDisplay({
         >
           <Card>
             <CardHeader>
-              <CardTitle>Multi-Metric Performance Trend</CardTitle>
-              <CardDescription>Track completion rate, wage payments, and active workers over time</CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Multi-Metric Performance Trend</CardTitle>
+                  <CardDescription>Track completion rate, wage payments, and active workers over time</CardDescription>
+                </div>
+                <div className="flex gap-2">
+                  <Button
+                    variant={timeRange === "3" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => onTimeRangeChange("3")}
+                  >
+                    3M
+                  </Button>
+                  <Button
+                    variant={timeRange === "6" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => onTimeRangeChange("6")}
+                  >
+                    6M
+                  </Button>
+                  <Button
+                    variant={timeRange === "12" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => onTimeRangeChange("12")}
+                  >
+                    1Y
+                  </Button>
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               <MultiMetricTrendChart data={history} />
@@ -391,6 +422,7 @@ function DashboardContent() {
   const [history, setHistory] = useState<HistoricalData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [timeRange, setTimeRange] = useState<"3" | "6" | "12">("6"); // Default 6 months
 
   useEffect(() => {
     async function fetchData() {
@@ -405,7 +437,7 @@ function DashboardContent() {
       try {
         const [dashboardRes, historyRes] = await Promise.all([
           fetch(`/api/dashboard?district=${districtCode}`),
-          fetch(`/api/history?district=${districtCode}`)
+          fetch(`/api/history?district=${districtCode}&range=${timeRange}`)
         ]);
 
         if (!dashboardRes.ok) {
@@ -426,7 +458,7 @@ function DashboardContent() {
     }
 
     fetchData();
-  }, [districtCode]);
+  }, [districtCode, timeRange]);
 
   if (loading) {
     return (
@@ -440,7 +472,13 @@ function DashboardContent() {
   }
 
   if (metrics) {
-    return <MetricsDisplay metrics={metrics} districtName={districtName} history={history} />;
+    return <MetricsDisplay 
+      metrics={metrics} 
+      districtName={districtName} 
+      history={history} 
+      timeRange={timeRange}
+      onTimeRangeChange={setTimeRange}
+    />;
   }
 
   return (
