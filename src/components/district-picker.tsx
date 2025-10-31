@@ -74,16 +74,84 @@ export function DistrictPicker({ districts }: DistrictPickerProps) {
 
   const isDisabled = isLoading || selection === placeholder.code;
 
-  const detectLocation = async () => {
+  const detectLocationByIP = async () => {
+    setDetectingLocation(true);
+    setError(null);
+
+    try {
+      // Use ipapi.co for IP-based geolocation (free, no API key needed)
+      const response = await fetch('https://ipapi.co/json/', {
+        cache: 'no-store',
+      });
+
+      if (!response.ok) {
+        throw new Error('IP geolocation service unavailable');
+      }
+
+      const data = await response.json();
+      console.log('🌍 IP Location:', data);
+
+      // Get all districts excluding placeholder
+      const validDistricts = options.filter(d => d.code !== "");
+      
+      if (validDistricts.length === 0) {
+        setError("❌ Districts not loaded yet. Please try again.");
+        return;
+      }
+
+      // Check if user is in West Bengal
+      const isInWestBengal = data.region === 'West Bengal' || data.region_code === 'WB';
+
+      if (isInWestBengal && data.city) {
+        // Try to match city name to district
+        const matchedDistrict = validDistricts.find(d => 
+          d.name.toLowerCase().includes(data.city.toLowerCase()) ||
+          data.city.toLowerCase().includes(d.name.toLowerCase())
+        );
+
+        if (matchedDistrict) {
+          setSelection(matchedDistrict.code);
+          setError(`✅ Detected: ${matchedDistrict.name} (based on IP location - ${data.city})`);
+        } else {
+          // Default to Kolkata if in WB but city doesn't match
+          const kolkata = validDistricts.find(d => d.code === "3217");
+          if (kolkata) {
+            setSelection(kolkata.code);
+            setError(`📍 West Bengal detected (${data.city}). Defaulting to ${kolkata.name}. Please select your actual district.`);
+          } else {
+            setSelection(validDistricts[0].code);
+            setError(`📍 West Bengal detected (${data.city}). Please select your district from the dropdown.`);
+          }
+        }
+      } else if (data.country_code === 'IN') {
+        // In India but not West Bengal
+        const firstDistrict = validDistricts[0];
+        setSelection(firstDistrict.code);
+        setError(`📍 Location detected: ${data.city}, ${data.region}. This app is for West Bengal. Defaulting to ${firstDistrict.name}.`);
+      } else {
+        // Outside India
+        const firstDistrict = validDistricts[0];
+        setSelection(firstDistrict.code);
+        setError(`🌍 Location detected: ${data.city}, ${data.country_name}. Defaulting to ${firstDistrict.name} for demo.`);
+      }
+    } catch (err) {
+      console.error("IP geolocation error:", err);
+      setError("❌ Could not detect location via IP. You might be using a VPN. Please select manually or try GPS detection.");
+    } finally {
+      setDetectingLocation(false);
+    }
+  };
+
+  const detectLocationByGPS = async () => {
     if (!navigator.geolocation) {
-      setError("❌ Location detection not supported by your browser");
+      setError("❌ GPS not supported by your browser");
       return;
     }
 
     // Check if site is served over HTTPS (required for geolocation in most browsers)
     const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
     if (!isSecure) {
-      setError("❌ Location detection requires HTTPS. Please access via HTTPS or select district manually.");
+      setError("❌ GPS requires HTTPS. IP-based detection works on HTTP.");
       return;
     }
 
@@ -100,7 +168,7 @@ export function DistrictPicker({ districts }: DistrictPickerProps) {
       });
 
       const { latitude, longitude } = position.coords;
-      console.log(`📍 Location detected: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
+      console.log(`📍 GPS: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`);
       
       // Get all districts excluding placeholder
       const validDistricts = options.filter(d => d.code !== "");
@@ -124,7 +192,7 @@ export function DistrictPicker({ districts }: DistrictPickerProps) {
         
         if (detectedDistrict) {
           setSelection(detectedDistrict.code);
-          setError(`✅ Detected: ${detectedDistrict.name} (You can change this if needed)`);
+          setError(`✅ GPS: ${detectedDistrict.name} (${latitude.toFixed(2)}°N, ${longitude.toFixed(2)}°E - More accurate!)`);
         } else {
           setError("❌ Could not find a matching district. Please select manually.");
         }
@@ -133,22 +201,22 @@ export function DistrictPicker({ districts }: DistrictPickerProps) {
         const firstDistrict = validDistricts[0];
         if (firstDistrict) {
           setSelection(firstDistrict.code);
-          setError(`📍 You appear to be outside West Bengal. Defaulting to ${firstDistrict.name}. Please select your actual district.`);
+          setError(`📍 GPS shows outside West Bengal. Defaulting to ${firstDistrict.name}.`);
         } else {
           setError("❌ You appear to be outside West Bengal. Please select manually.");
         }
       }
     } catch (err) {
-      console.error("Geolocation error:", err);
-      let errorMessage = "❌ Unable to detect location. Please select manually.";
+      console.error("GPS error:", err);
+      let errorMessage = "❌ GPS failed. Try IP-based detection instead.";
       
       if (err instanceof GeolocationPositionError) {
         if (err.code === 1) {
-          errorMessage = "❌ Location permission denied. Please click the 🔒 icon in your browser's address bar and allow location access, then try again.";
+          errorMessage = "❌ GPS permission denied. Click 🔒 in address bar to allow, or use IP detection.";
         } else if (err.code === 2) {
-          errorMessage = "❌ Location unavailable. Please check your device location settings.";
+          errorMessage = "❌ GPS unavailable. Use IP detection instead.";
         } else if (err.code === 3) {
-          errorMessage = "❌ Location request timed out. Please try again.";
+          errorMessage = "❌ GPS timeout. Try IP detection.";
         }
       }
       
@@ -192,23 +260,34 @@ export function DistrictPicker({ districts }: DistrictPickerProps) {
           ))}
         </select>
         {error ? (
-          <p className={`text-sm ${error.startsWith('✅') ? 'text-green-600 dark:text-green-400' : 'text-destructive'}`}>
+          <p className={`text-sm ${error.startsWith('✅') ? 'text-green-600 dark:text-green-400' : error.startsWith('📍') || error.startsWith('🌍') ? 'text-amber-600 dark:text-amber-400' : 'text-destructive'}`}>
             {error}
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">
-            Click below to detect your location automatically, or select manually from dropdown.
+            Auto-detect using your IP address (works instantly, no permission needed) or GPS (more accurate, requires HTTPS).
           </p>
         )}
-        <Button 
-          size="lg" 
-          variant="outline" 
-          disabled={detectingLocation || isLoading} 
-          className="mt-2" 
-          onClick={detectLocation}
-        >
-          {detectingLocation ? "Detecting..." : "📍 Detect My District"}
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            size="lg" 
+            variant="default" 
+            disabled={detectingLocation || isLoading} 
+            className="flex-1" 
+            onClick={detectLocationByIP}
+          >
+            {detectingLocation ? "Detecting..." : "🌍 Detect via IP"}
+          </Button>
+          <Button 
+            size="lg" 
+            variant="outline" 
+            disabled={detectingLocation || isLoading} 
+            className="flex-1" 
+            onClick={detectLocationByGPS}
+          >
+            {detectingLocation ? "Detecting..." : "📍 GPS (Precise)"}
+          </Button>
+        </div>
         <Button size="lg" disabled={isDisabled} onClick={handleContinue}>
           {isLoading ? "Loading…" : "Continue"}
         </Button>
