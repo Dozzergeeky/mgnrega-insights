@@ -16,6 +16,11 @@ function generateMockMetrics(districtCode: string) {
   const activeWorkers = 8000 + Math.floor(randomFactor * 7000); // 8K-15K workers
   const totalProjects = 300 + Math.floor(randomFactor * 250); // 300-550 projects
   const completedProjects = Math.floor(totalProjects * (completionRate / 100));
+  const ongoingProjects = totalProjects - completedProjects;
+  const totalWorkers = Math.floor(activeWorkers * 10); // Total registered workers
+  const activeJobCards = Math.floor(activeWorkers * 0.5); // ~50% of active workers have active cards
+  const workerEngagementRate = ((activeWorkers / totalWorkers) * 100).toFixed(2);
+  const avgWagePerWorker = Math.floor(baseWagePayments / activeWorkers);
 
   return {
     workDemand: baseWorkDemand,
@@ -24,6 +29,11 @@ function generateMockMetrics(districtCode: string) {
     activeWorkers,
     totalProjects,
     completedProjects,
+    ongoingProjects,
+    totalWorkers,
+    activeJobCards,
+    workerEngagementRate: parseFloat(workerEngagementRate),
+    avgWagePerWorker,
   };
 }
 
@@ -55,21 +65,29 @@ export async function GET(request: Request) {
         const worksOngoing = sumField(dataGovRecords, "Number_of_Ongoing_Works");
         const worksTakenUp = sumField(dataGovRecords, "Total_No_of_Works_Takenup");
         const activeWorkers = sumField(dataGovRecords, "Total_No_of_Active_Workers");
+        const totalWorkers = sumField(dataGovRecords, "Total_No_of_Workers");
+        const activeJobCards = sumField(dataGovRecords, "Total_No_of_Active_Job_Cards");
 
         const totalProjects = worksCompleted + worksOngoing;
         // Use totalProjects as the metric instead of person-days (which are often 0 in the API)
         const workDemand = totalProjects;
         
-        // Calculate Works Implementation Rate: shows percentage of sanctioned works actively being implemented
-        // This is a positive metric showing active execution rather than completion rate
+        // Calculate Works Implementation Rate with higher precision
         const implementationRate = worksTakenUp > 0 
           ? ((worksOngoing + worksCompleted) / worksTakenUp) * 100 
           : 0;
         
-        // Format based on value
-        const formattedCompletionRate = implementationRate < 1 
-          ? Math.round(implementationRate * 100) / 100
-          : Math.round(implementationRate * 10) / 10;
+        // Keep 2 decimal places for precision
+        const formattedCompletionRate = Math.round(implementationRate * 100) / 100;
+        
+        // Calculate additional metrics
+        const workerEngagementRate = totalWorkers > 0 
+          ? Math.round((activeWorkers / totalWorkers) * 10000) / 100 
+          : 0;
+        
+        const avgWagePerWorker = activeWorkers > 0 
+          ? Math.round(wagePayments / activeWorkers) 
+          : 0;
 
         return NextResponse.json({
           districtCode,
@@ -80,6 +98,11 @@ export async function GET(request: Request) {
             activeWorkers: Math.round(activeWorkers),
             totalProjects,
             completedProjects: worksCompleted,
+            ongoingProjects: worksOngoing,
+            totalWorkers: Math.round(totalWorkers),
+            activeJobCards: Math.round(activeJobCards),
+            workerEngagementRate,
+            avgWagePerWorker,
           },
           lastUpdated: record.lastSyncedAt,
           source: "real_data",

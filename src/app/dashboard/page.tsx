@@ -7,6 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Loader2 } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line, XAxis, YAxis, CartesianGrid } from "recharts";
+import { motion } from "framer-motion";
 
 interface DashboardMetrics {
   workDemand: number;
@@ -15,6 +17,11 @@ interface DashboardMetrics {
   activeWorkers: number;
   totalProjects: number;
   completedProjects: number;
+  ongoingProjects: number;
+  totalWorkers: number;
+  activeJobCards: number;
+  workerEngagementRate: number;
+  avgWagePerWorker: number;
 }
 
 interface HistoricalData {
@@ -33,38 +40,88 @@ function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-function SimpleTrendChart({ data }: { data: HistoricalData[] }) {
+function WorksDistributionChart({ metrics }: { metrics: DashboardMetrics }) {
+  const pieData = [
+    { name: "Completed", value: metrics.completedProjects, color: "#10b981" },
+    { name: "Ongoing", value: metrics.ongoingProjects, color: "#3b82f6" },
+  ];
+
+  const renderLabel = (entry: any) => {
+    return `${entry.name}: ${(entry.percent * 100).toFixed(1)}%`;
+  };
+
+  return (
+    <ResponsiveContainer width="100%" height={300}>
+      <PieChart>
+        <Pie
+          data={pieData}
+          cx="50%"
+          cy="50%"
+          labelLine={false}
+          label={renderLabel}
+          outerRadius={100}
+          fill="#8884d8"
+          dataKey="value"
+        >
+          {pieData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.color} />
+          ))}
+        </Pie>
+        <Tooltip />
+        <Legend />
+      </PieChart>
+    </ResponsiveContainer>
+  );
+}
+
+function MultiMetricTrendChart({ data }: { data: HistoricalData[] }) {
   if (data.length === 0) return null;
 
-  const maxCompletion = Math.max(...data.map(d => d.completionRate), 1);
-  
+  const chartData = data.slice(-6).map(record => ({
+    month: record.month.substring(0, 3),
+    completion: record.completionRate,
+    wages: record.wagePayments / 10000000, // Convert to Crores
+    workers: record.activeWorkers ? record.activeWorkers / 1000 : 0, // Convert to thousands
+  }));
+
   return (
-    <div className="space-y-4">
-      <p className="text-sm font-medium text-muted-foreground">6-Month Completion Trend</p>
-      <div className="flex items-end justify-between gap-2 h-40 px-2">
-        {data.slice(-6).map((record, idx) => {
-          const height = Math.max((record.completionRate / maxCompletion) * 100, 5);
-          return (
-            <div key={idx} className="flex-1 flex flex-col items-center gap-2">
-              <div className="w-full flex items-end" style={{ height: "120px" }}>
-                <div 
-                  className="w-full bg-linear-to-t from-blue-600 to-blue-400 rounded-t transition-all hover:from-blue-700 hover:to-blue-500" 
-                  style={{ height: `${height}%`, minHeight: "8px" }}
-                  title={`${record.month}: ${record.completionRate}%`}
-                />
-              </div>
-              <span className="text-xs text-muted-foreground text-center">
-                {record.month.substring(0, 3)}
-              </span>
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex justify-between text-xs text-muted-foreground px-2">
-        <span>0%</span>
-        <span>{Math.round(maxCompletion)}%</span>
-      </div>
-    </div>
+    <ResponsiveContainer width="100%" height={300}>
+      <LineChart data={chartData}>
+        <CartesianGrid strokeDasharray="3 3" />
+        <XAxis dataKey="month" />
+        <YAxis yAxisId="left" />
+        <YAxis yAxisId="right" orientation="right" />
+        <Tooltip />
+        <Legend />
+        <Line
+          yAxisId="left"
+          type="monotone"
+          dataKey="completion"
+          stroke="#3b82f6"
+          strokeWidth={2}
+          name="Completion %"
+          dot={{ r: 4 }}
+        />
+        <Line
+          yAxisId="right"
+          type="monotone"
+          dataKey="wages"
+          stroke="#10b981"
+          strokeWidth={2}
+          name="Wages (Cr)"
+          dot={{ r: 4 }}
+        />
+        <Line
+          yAxisId="right"
+          type="monotone"
+          dataKey="workers"
+          stroke="#f59e0b"
+          strokeWidth={2}
+          name="Workers (K)"
+          dot={{ r: 4 }}
+        />
+      </LineChart>
+    </ResponsiveContainer>
   );
 }
 
@@ -77,6 +134,26 @@ function MetricsDisplay({
   districtName: string;
   history: HistoricalData[];
 }) {
+  // Calculate Job Card Activation Rate with safety checks
+  const jobCardActivationRate = (metrics.totalWorkers && metrics.activeJobCards && metrics.totalWorkers > 0)
+    ? ((metrics.activeJobCards / metrics.totalWorkers) * 100).toFixed(2)
+    : "0";
+  
+  // Provide defaults for optional fields
+  const safeMetrics = {
+    ...metrics,
+    ongoingProjects: metrics.ongoingProjects ?? (metrics.totalProjects - metrics.completedProjects),
+    totalWorkers: metrics.totalWorkers ?? metrics.activeWorkers * 10,
+    activeJobCards: metrics.activeJobCards ?? Math.floor(metrics.activeWorkers * 0.5),
+    workerEngagementRate: metrics.workerEngagementRate ?? 0,
+    avgWagePerWorker: metrics.avgWagePerWorker ?? (metrics.activeWorkers > 0 ? Math.floor(metrics.wagePayments / metrics.activeWorkers) : 0),
+  };
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 50 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
     <>
       <div className="flex items-center justify-between mb-8">
@@ -97,81 +174,202 @@ function MetricsDisplay({
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardTitle>Total Works</CardTitle>
-            <CardDescription>Projects undertaken this period</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold text-primary">{metrics.workDemand.toLocaleString("en-IN")}</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {metrics.activeWorkers.toLocaleString("en-IN")} active workers
-            </p>
-          </CardContent>
-        </Card>
+        <motion.div
+          variants={cardVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          transition={{ duration: 0.5 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Total Works</CardTitle>
+              <CardDescription>Projects undertaken this period</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold text-primary">{safeMetrics.workDemand.toLocaleString("en-IN")}</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {safeMetrics.activeWorkers.toLocaleString("en-IN")} active workers
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Wage Payments</CardTitle>
-            <CardDescription>Total disbursed this month</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold text-green-600">{formatCurrency(metrics.wagePayments)}</p>
-            <p className="mt-2 text-sm text-muted-foreground">Directly to workers&apos; accounts</p>
-          </CardContent>
-        </Card>
+        <motion.div
+          variants={cardVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.1 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Wage Payments</CardTitle>
+              <CardDescription>Total disbursed this month</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold text-green-600">{formatCurrency(safeMetrics.wagePayments)}</p>
+              <p className="mt-2 text-sm text-muted-foreground">Directly to workers&apos; accounts</p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Implementation Progress</CardTitle>
-            <CardDescription>Works actively under execution</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-4xl font-bold text-blue-600">{metrics.completionRate}%</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              {metrics.completedProjects} completed, {metrics.totalProjects - metrics.completedProjects} ongoing
-            </p>
-          </CardContent>
-        </Card>
+        <motion.div
+          variants={cardVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Implementation Progress</CardTitle>
+              <CardDescription>Works actively under execution</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold text-blue-600">{safeMetrics.completionRate}%</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {safeMetrics.completedProjects} completed, {safeMetrics.ongoingProjects} ongoing
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card className="md:col-span-2 lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Work Summary</CardTitle>
-            <CardDescription>Current status of MGNREGA implementation</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-center justify-between border-b pb-3">
-              <span className="text-sm font-medium">Total Projects</span>
-              <span className="text-lg font-semibold">{metrics.totalProjects}</span>
-            </div>
-            <div className="flex items-center justify-between border-b pb-3">
-              <span className="text-sm font-medium">Completed Projects</span>
-              <span className="text-lg font-semibold text-green-600">{metrics.completedProjects}</span>
-            </div>
-            <div className="flex items-center justify-between border-b pb-3">
-              <span className="text-sm font-medium">In Progress</span>
-              <span className="text-lg font-semibold text-blue-600">
-                {metrics.totalProjects - metrics.completedProjects}
-              </span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Average Wage per Worker</span>
-              <span className="text-lg font-semibold">
-                {formatCurrency(metrics.activeWorkers > 0 ? metrics.wagePayments / metrics.activeWorkers : 0)}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+        <motion.div
+          variants={cardVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.3 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Worker Engagement</CardTitle>
+              <CardDescription>Active workforce participation</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold text-purple-600">{safeMetrics.workerEngagementRate}%</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {safeMetrics.activeWorkers.toLocaleString("en-IN")} of {safeMetrics.totalWorkers.toLocaleString("en-IN")} workers
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card className="md:col-span-2 lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Performance Trend</CardTitle>
-            <CardDescription>How your district has performed over time</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <SimpleTrendChart data={history} />
-          </CardContent>
-        </Card>
+        <motion.div
+          variants={cardVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Job Card Activation</CardTitle>
+              <CardDescription>Active job cards issued</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold text-orange-600">{jobCardActivationRate}%</p>
+              <p className="mt-2 text-sm text-muted-foreground">
+                {safeMetrics.activeJobCards.toLocaleString("en-IN")} active cards
+              </p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          variants={cardVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          transition={{ duration: 0.5, delay: 0.5 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Avg Wage per Worker</CardTitle>
+              <CardDescription>Fund utilization efficiency</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold text-teal-600">{formatCurrency(safeMetrics.avgWagePerWorker)}</p>
+              <p className="mt-2 text-sm text-muted-foreground">Per active worker this period</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          variants={cardVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.6 }}
+          className="md:col-span-2 lg:col-span-2"
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Works Distribution</CardTitle>
+              <CardDescription>Breakdown of completed vs ongoing projects</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <WorksDistributionChart metrics={safeMetrics} />
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          variants={cardVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.7 }}
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Work Summary</CardTitle>
+              <CardDescription>Current implementation status</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between border-b pb-3">
+                <span className="text-sm font-medium">Total Projects</span>
+                <span className="text-lg font-semibold">{metrics.totalProjects}</span>
+              </div>
+              <div className="flex items-center justify-between border-b pb-3">
+                <span className="text-sm font-medium">Completed Projects</span>
+                <span className="text-lg font-semibold text-green-600">{metrics.completedProjects}</span>
+              </div>
+              <div className="flex items-center justify-between border-b pb-3">
+                <span className="text-sm font-medium">In Progress</span>
+                <span className="text-lg font-semibold text-blue-600">
+                  {metrics.ongoingProjects}
+                </span>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Total Workers</span>
+                <span className="text-lg font-semibold">
+                  {metrics.totalWorkers.toLocaleString("en-IN")}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          variants={cardVariants}
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true }}
+          transition={{ duration: 0.6, delay: 0.8 }}
+          className="md:col-span-2 lg:col-span-3"
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle>Multi-Metric Performance Trend</CardTitle>
+              <CardDescription>Track completion rate, wage payments, and active workers over time</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MultiMetricTrendChart data={history} />
+            </CardContent>
+          </Card>
+        </motion.div>
       </div>
     </>
   );

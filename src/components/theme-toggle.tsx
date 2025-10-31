@@ -5,27 +5,26 @@ import { Button } from "@/components/ui/button";
 
 type ThemeVariant = "light" | "dark";
 
-const getInitialTheme = (): ThemeVariant => {
-  if (typeof window === "undefined") {
-    return "light";
-  }
-
-  const stored = window.localStorage.getItem("theme");
-  if (stored === "light" || stored === "dark") {
-    return stored;
-  }
-
-  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
-};
-
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<ThemeVariant>(getInitialTheme);
+  const [theme, setTheme] = useState<ThemeVariant | null>(null);
 
   useEffect(() => {
-    if (typeof window === "undefined") {
-      return;
+    // Only run on client
+    const stored = window.localStorage.getItem("theme");
+    if (stored === "light" || stored === "dark") {
+      setTheme(stored);
+      document.documentElement.classList.toggle("dark", stored === "dark");
+    } else {
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      const initialTheme = prefersDark ? "dark" : "light";
+      setTheme(initialTheme);
+      document.documentElement.classList.toggle("dark", prefersDark);
     }
+  }, []);
 
+  useEffect(() => {
+    if (theme === null) return;
+    
     window.localStorage.setItem("theme", theme);
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
@@ -33,6 +32,21 @@ export function ThemeToggle() {
   const toggleTheme = () => {
     setTheme((current) => (current === "light" ? "dark" : "light"));
   };
+
+  // Don't render until we know the theme on client
+  if (theme === null) {
+    return (
+      <Button
+        variant="outline"
+        size="icon"
+        className="rounded-full"
+        aria-label="Toggle theme"
+        disabled
+      >
+        <span className="text-xl opacity-0">🌙</span>
+      </Button>
+    );
+  }
 
   return (
     <Button
@@ -42,11 +56,9 @@ export function ThemeToggle() {
       className="rounded-full"
       aria-label="Toggle theme"
     >
-      {theme === "light" ? (
-        <span className="text-xl">🌙</span>
-      ) : (
-        <span className="text-xl">☀️</span>
-      )}
+      <span className="text-xl" suppressHydrationWarning>
+        {theme === "light" ? "🌙" : "☀️"}
+      </span>
     </Button>
   );
 }
