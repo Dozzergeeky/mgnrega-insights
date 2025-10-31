@@ -223,8 +223,94 @@ npm run db:down   # stop and remove the Dockerized MongoDB container
 - **GitHub Repository**: https://github.com/Dozzergeeky/mgnrega-insights
 - **Platforms**: Vercel (serverless) + Linode VPS (Ubuntu + PM2 + Nginx)
 
-## Deployment Notes
+## Production Operations
 
-The app is deployed on Vercel for serverless hosting with automatic scaling. It can also be deployed on a VPS/VM behind nginx with TLS, backed by MongoDB and optionally Redis/Queue workers for ingestion retries. Observability (Prometheus/Grafana or similar) should be wired around the `/api/health` endpoint and the ingestion cron.
+The VPS deployment includes enterprise-grade production features:
+
+### Automated Systems
+
+- **Health Monitoring**: Runs every 5 minutes with automatic recovery
+  - App health checks with PM2 restart on failure
+  - MongoDB process monitoring with auto-restart
+  - Disk usage alerts (>85% threshold)
+  - Handles PM2 errored states with clean restarts
+
+- **Data Synchronization**: Daily at 2 AM UTC
+  - Pulls latest MGNREGA data from data.gov.in
+  - Idempotent updates (safe to run multiple times)
+  - Logs all operations to `/logs/sync.log`
+
+- **MongoDB Backups**: Daily at 3 AM UTC
+  - Compressed backups with 7-day retention
+  - Stored in `/backups/` directory
+  - Automatic cleanup of old backups
+  - Backup size: ~7KB per snapshot
+
+- **Webhook Alerting**: Real-time notifications
+  - Critical alerts for system failures
+  - Warning alerts for degraded performance
+  - Daily health summary reports
+  - Discord/Slack compatible webhooks
+
+### Boot Resilience
+
+All critical services are configured to start automatically on boot:
+- ✅ Nginx (reverse proxy)
+- ✅ MongoDB (database)
+- ✅ PM2 (process manager)
+
+### Operations Guide
+
+See **[OPERATIONS.md](./OPERATIONS.md)** for comprehensive documentation including:
+- Health monitoring and logs
+- Manual operations (restart, sync, backup)
+- Troubleshooting procedures
+- Security best practices
+- Maintenance schedules
+- Useful commands cheatsheet
+
+### Quick Operations
+
+```bash
+# Check application health
+curl http://172.105.36.247/api/health
+
+# Restart application (from local machine)
+./scripts/fix-pm2-app.exp
+
+# View monitoring logs
+ssh dozzer@172.105.36.247 "tail -50 /home/dozzer/mgnrega-app/logs/health.log"
+
+# Manual backup
+./scripts/test-backup.exp
+
+# Manual data sync
+./scripts/test-cron-sync.exp
+```
+
+### Deployment Notes
+
+The app is deployed on Vercel for serverless hosting with automatic scaling. The VPS deployment on Linode provides a production-grade environment with:
+
+- **Monitoring**: Automated health checks every 5 minutes
+- **Recovery**: Self-healing with automatic service restarts
+- **Backups**: Daily MongoDB backups with 7-day retention
+- **Alerting**: Optional webhook notifications for critical events
+- **Observability**: Comprehensive logging and health endpoints
 
 For Postgres integration, set `POSTGRES_URL` environment variable in your deployment platform.
+
+### Configure Webhook Alerts (Optional)
+
+To receive real-time alerts for system issues:
+
+```bash
+# Discord
+./scripts/configure-webhook.exp "https://discord.com/api/webhooks/YOUR_ID/YOUR_TOKEN"
+
+# Slack
+./scripts/configure-webhook.exp "https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
+
+# Test
+ssh dozzer@172.105.36.247 "/home/dozzer/mgnrega-app/scripts/alert-webhook.sh test"
+```

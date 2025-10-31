@@ -292,22 +292,51 @@ You’ve got this! 🎬🚀
 - Dashboard fetches data client-side with useEffect; shows loading spinner; falls back to mock when needed → 100% availability.
 
 1:35 — Production Readiness
-**[SHOW: Browser address bar highlighting the Vercel URL]**
+**[SHOW: Browser address bar highlighting the VPS URL]**
 
-- Deployed on Vercel ([production deployment](https://mgnrega-2n74in54e-dozzergeekys-projects.vercel.app)).
+- Deployed on Linode VPS ([http://172.105.36.247](http://172.105.36.247)) and Vercel ([production deployment](https://mgnrega-2n74in54e-dozzergeekys-projects.vercel.app)).
+**[OPEN NEW TAB: Show /api/health endpoint]**
+
+- Health endpoint returns real-time status: `{"status":"ok","timestamp":"..."}`
+**[OPEN SSH/TERMINAL: Show monitoring logs briefly]**
+
+- Enterprise-grade operations:
+  - **Automated health monitoring** every 5 minutes with self-healing
+  - **Daily MongoDB backups** at 3 AM UTC (7-day retention)
+  - **Daily data sync** from data.gov.in at 2 AM UTC
+  - **Webhook alerting** for critical failures (Discord/Slack compatible)
+  - **Boot resilience** - all services start automatically on reboot
+
+**[SHOW: Terminal running `tail -20 /home/dozzer/mgnrega-app/logs/health.log`]**
+
+- Real-time monitoring logs show app health, disk usage, MongoDB status, PM2 processes
+- System automatically restarts failed services
+
+**[SWITCH TO: File explorer showing documentation files]**
+
+- Comprehensive documentation:
+  - **README.md** - Application features and development
+  - **OPERATIONS.md** - Complete operations guide (NEW - 300+ lines)
+  - **DEPLOYMENT.md** - Deployment instructions
+  - **DATA-INTEGRATION.md** - Real data setup
+
+**[SHOW: scripts/ directory with 34+ deployment scripts]**
+
+- 34 deployment automation scripts for easy server management
+- One-command operations: restart app, check health, run backups, sync data
+
 **[OPEN NEW TAB: Show GitHub repo quickly]**
 
 - GitHub: [Dozzergeeky/mgnrega-insights](https://github.com/Dozzergeeky/mgnrega-insights).
-**[SWITCH TO: package.json showing dependencies]**
 
-- Works on Vercel or VPS, with optional cron-based sync.
-**[SHOW: .env.example or README section on environment variables]**
+**[SHOW: Crontab output]**
 
-- Environment validated with Zod, strict TypeScript, Playwright E2E.
-- Optional Neon Postgres for serverless database (configured via POSTGRES_URL).
-**[SHOW: List of documentation files in file explorer]**
-
-- See DATA-INTEGRATION.md, DEPLOYMENT.md, PRODUCTION-CHECKLIST.md.
+- Five automated cron jobs keep the system running:
+  1. Data sync (daily 2 AM)
+  2. MongoDB backup (daily 3 AM)
+  3. Health monitoring (every 5 min)
+  4. Alert checking (every 5 min)
+  5. Daily health summary (9 AM)
 
 1:50 — Close
 **[SWITCH BACK: To production dashboard showing full page]**

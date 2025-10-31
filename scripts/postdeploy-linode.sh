@@ -43,16 +43,16 @@ ssh -p "$SSH_PORT" "$SSH_TARGET" bash -s -- \
 	"$REMOTE_DOMAIN" "$REMOTE_ALT_DOMAIN" "$REMOTE_SSL_EMAIL" \
 	"$ENABLE_SSL" "$INSTALL_MONGODB" "$ENABLE_UFW" <<'EOF'
 set -euo pipefail
-APP_DIR="$1"
-ENV_FILE="$2"
-UPLOAD_PATH="$3"
-LOG_FILE="$4"
-DOMAIN="$5"
-ALT_DOMAIN="$6"
-SSL_EMAIL="$7"
-ENABLE_SSL_FLAG="$8"
-INSTALL_MONGODB_FLAG="$9"
-ENABLE_UFW_FLAG="${10}"
+APP_DIR="${1:?Missing remote app directory}"
+ENV_FILE="${2:?Missing remote env path}"
+UPLOAD_PATH="${3:?Missing uploaded env path}"
+LOG_FILE="${4:-/var/log/mgnrega-sync.log}"
+DOMAIN="${5:-}"
+ALT_DOMAIN="${6:-}"
+SSL_EMAIL="${7:-}"
+ENABLE_SSL_FLAG="${8:-false}"
+INSTALL_MONGODB_FLAG="${9:-true}"
+ENABLE_UFW_FLAG="${10:-false}"
 
 REMOTE_USER="$(id -un)"
 REMOTE_HOME="$(getent passwd "$REMOTE_USER" | cut -d: -f6 || printf '%s' "$HOME")"
@@ -111,8 +111,16 @@ if [[ "$INSTALL_MONGODB_FLAG" != "false" ]]; then
 
 	if systemctl list-units --type=service | grep -q '^mongod.service'; then
 		${SUDO[@]:-} systemctl enable --now mongod
+		if ! systemctl is-active --quiet mongod; then
+			${SUDO[@]:-} systemctl restart mongod || true
+		fi
+		${SUDO[@]:-} systemctl enable mongod >/dev/null 2>&1 || true
 	elif systemctl list-units --type=service | grep -q '^mongodb.service'; then
 		${SUDO[@]:-} systemctl enable --now mongodb
+		if ! systemctl is-active --quiet mongodb; then
+			${SUDO[@]:-} systemctl restart mongodb || true
+		fi
+		${SUDO[@]:-} systemctl enable mongodb >/dev/null 2>&1 || true
 	fi
 fi
 
@@ -122,7 +130,26 @@ ${SUDO[@]:-} chown "$REMOTE_USER":"$REMOTE_USER" "$LOG_FILE" 2>/dev/null || true
 
 cd "$APP_DIR"
 
-npm run db:up || true
+if command -v mongosh >/dev/null 2>&1; then
+	PING_CMD="mongosh --quiet --eval 'db.runCommand({ ping: 1 })'"
+elif command -v mongo >/dev/null 2>&1; then
+	PING_CMD="mongo --quiet --eval 'db.runCommand({ ping: 1 })'"
+else
+	PING_CMD=""
+fi
+
+if [[ -n "$PING_CMD" ]]; then
+	i=0
+	until eval "$PING_CMD" >/dev/null 2>&1; do
+		sleep 2
+		i=$((i + 1))
+		if [[ $i -ge 15 ]]; then
+			echo "[postdeploy] MongoDB is not responding on localhost:27017 after 30s." >&2
+			break
+		fi
+	 done
+fi
+
 npm run seed:districts || true
 
 SERVER_NAME="$DOMAIN"
@@ -149,9 +176,11 @@ NGINX
 
 ${SUDO[@]:-} tee /etc/nginx/sites-available/mgnrega >/dev/null <<<"$NGINX_CONF"
 ${SUDO[@]:-} ln -sf /etc/nginx/sites-available/mgnrega /etc/nginx/sites-enabled/mgnrega
+${SUDO[@]:-} rm -f /etc/nginx/sites-available/mgnrega-insights /etc/nginx/sites-enabled/mgnrega-insights
 ${SUDO[@]:-} rm -f /etc/nginx/sites-enabled/default
 ${SUDO[@]:-} nginx -t
-${SUDO[@]:-} systemctl reload nginx
+${SUDO[@]:-} systemctl enable --now nginx
+${SUDO[@]:-} systemctl reload nginx || ${SUDO[@]:-} systemctl restart nginx
 
 if [[ "$ENABLE_SSL_FLAG" == "true" && -n "$DOMAIN" && -n "$SSL_EMAIL" ]]; then
 	${SUDO[@]:-} apt-get install -y certbot python3-certbot-nginx
