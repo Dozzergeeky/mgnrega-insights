@@ -80,6 +80,13 @@ export function DistrictPicker({ districts }: DistrictPickerProps) {
       return;
     }
 
+    // Check if site is served over HTTPS (required for geolocation in most browsers)
+    const isSecure = window.location.protocol === 'https:' || window.location.hostname === 'localhost';
+    if (!isSecure) {
+      setError("❌ Location detection requires HTTPS. Please access via HTTPS or select district manually.");
+      return;
+    }
+
     setDetectingLocation(true);
     setError(null);
 
@@ -133,13 +140,18 @@ export function DistrictPicker({ districts }: DistrictPickerProps) {
       }
     } catch (err) {
       console.error("Geolocation error:", err);
-      const errorMessage = err instanceof GeolocationPositionError 
-        ? err.code === 1 
-          ? "❌ Location permission denied. Please enable location access in your browser."
-          : err.code === 2
-          ? "❌ Location unavailable. Please check your device settings."
-          : "❌ Location request timed out. Please try again."
-        : "❌ Unable to detect location. Please select manually.";
+      let errorMessage = "❌ Unable to detect location. Please select manually.";
+      
+      if (err instanceof GeolocationPositionError) {
+        if (err.code === 1) {
+          errorMessage = "❌ Location permission denied. Please click the 🔒 icon in your browser's address bar and allow location access, then try again.";
+        } else if (err.code === 2) {
+          errorMessage = "❌ Location unavailable. Please check your device location settings.";
+        } else if (err.code === 3) {
+          errorMessage = "❌ Location request timed out. Please try again.";
+        }
+      }
+      
       setError(errorMessage);
     } finally {
       setDetectingLocation(false);
