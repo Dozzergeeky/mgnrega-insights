@@ -72,9 +72,10 @@ export async function GET(request: Request) {
         // Use totalProjects as the metric instead of person-days (which are often 0 in the API)
         const workDemand = totalProjects;
         
-        // Calculate actual Completion Rate: percentage of completed works out of total projects
-        const completionRate = totalProjects > 0 
-          ? (worksCompleted / totalProjects) * 100 
+        // Calculate Work Progress Rate: percentage of active works (completed + ongoing) out of total taken up
+        // This shows implementation progress rather than just completion
+        const completionRate = worksTakenUp > 0 
+          ? ((worksCompleted + worksOngoing) / worksTakenUp) * 100 
           : 0;
         
         // Keep 2 decimal places for precision
